@@ -2,6 +2,9 @@ require File.expand_path('../../spec_helper', __FILE__)
 require File.expand_path('../../../common/adapter_integration_tests', __FILE__)
 
 describe 'Integration with MiniTest 4' do
+  def build_suite
+
+
   def adapter_name
     'minitest_4'
   end

@@ -5,8 +5,6 @@ ruby_18_stuff = proc do
 
   ruby_18_rails_2 = proc do
     gem 'rails', '~> 2.3'
-    gem 'activesupport', '~> 2.3'
-    gem 'activerecord', '~> 2.3'
     gem 'mocha', '~> 0.12.0'
     gem 'sqlite3', '~> 1.3', :platforms => :ruby
     gem 'activerecord-jdbcsqlite3-adapter', :platforms => :jruby
@@ -58,24 +56,22 @@ ruby_19_stuff = proc do
   end
 
   ruby_19_rails_3 = proc do
-    gem 'railties', '~> 3.0'
-    gem 'activesupport', '~> 3.0'
-    gem 'activerecord', '~> 3.0'
+    gem 'rails', '~> 3.0'
     gem 'sqlite3', '~> 1.3', :platforms => :ruby
     gem 'activerecord-jdbcsqlite3-adapter', :platforms => :jruby
   end
 
   ruby_19_rails_4 = proc do
-    gem 'railties', '4.0.0.rc1'
-    gem 'activesupport', '4.0.0.rc1'
-    gem 'activerecord', '4.0.0.rc1'
-    gem 'rspec-rails', '~> 2.0'
+    gem 'rails', '4.0.0.rc1'
     gem 'sqlite3', '~> 1.3', :platforms => :ruby
     gem 'activerecord-jdbcsqlite3-adapter', :platforms => :jruby
   end
 
   ruby_19_rspec_2 = proc do
-    gem "rspec", "~> 2.13"
+    gem 'rspec', '~> 2.13'
+  end
+
+  ruby_19_rspec_rails = proc do
   end
 
   #---
@@ -135,11 +131,13 @@ ruby_19_stuff = proc do
   appraise 'ruby_19_rspec_2_rails_3' do
     instance_eval &ruby_19_rspec_2
     instance_eval &ruby_19_rails_3
+    gem 'rspec-rails', '~> 2.0', require: false
   end
 
   appraise 'ruby_19_rspec_2_rails_4' do
     instance_eval &ruby_19_rspec_2
     instance_eval &ruby_19_rails_4
+    gem 'rspec-rails', '~> 2.0', require: false
   end
 end
 
