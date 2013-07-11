@@ -1,13 +1,13 @@
-require File.expand_path('../../../adapter_integration_tests/generic_project', __FILE__)
+require File.expand_path('../generic_project', __FILE__)
 
 module AdapterIntegrationTests
   class FailWithOutputMatcher < Struct.new(:pattern)
-    def description
-      "fail with output #{pattern.inspect}"
-    end
-
     def matches?(result)
       result.output =~ pattern
+    end
+
+    def description
+      "fail with output #{pattern.inspect}"
     end
 
     def failure_message_for_should
@@ -19,17 +19,36 @@ module AdapterIntegrationTests
     end
   end
 
+  class HaveNoErrorsOrFailuresMatcher
+    def matches?(result)
+      match = result.output.match(/(\d+) error|(\d+) failure/)
+      !match.captures.any? {|n| n && n != '0' }
+    end
+
+    def description
+      "have no errors or failures"
+    end
+
+    def failure_message_for_should
+      "Expected running the test to not result in errors or failures but it did"
+    end
+
+    def failure_message_for_should_not
+      "Expected running the test to result in errors or failures, but it did not"
+    end
+  end
+
   def build_project
     AdapterIntegrationTests::GenericProject.new
   end
 
-  def create_project(project_class)
-    project_class.new.tap do |project|
-      configure_project(project)
-      yield project if block_given?
-      project.create
-    end
-  end
+  #def create_project(project_class)
+    #project_class.new.tap do |project|
+      #configure_project(project)
+      #yield project if block_given?
+      #project.create
+    #end
+  #end
 
   def build_test_file(body, options={})
     # If this is a Rails app then the include_rr_before_test_framework option
@@ -42,6 +61,10 @@ module AdapterIntegrationTests
 
   def fail_with_output(pattern)
     FailWithOutputMatcher.new(pattern)
+  end
+
+  def have_no_errors_or_failures
+    HaveNoErrorsOrFailuresMatcher.new
   end
 
 =begin

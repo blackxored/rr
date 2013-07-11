@@ -1,27 +1,24 @@
 require File.expand_path('../../spec_helper', __FILE__)
-require File.expand_path('../../../common/rails_test_unit_integration_tests', __FILE__)
-require File.expand_path('../../../common/rails_cucumber_integration_tests', __FILE__)
+require File.expand_path('../../../common/rails_integration_tests', __FILE__)
+require File.expand_path('../../../common/test_unit_project', __FILE__)
+require File.expand_path('../../../common/rails_test_unit_project', __FILE__)
+require File.expand_path('../../../common/cucumber_project', __FILE__)
 
 describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   include RailsIntegrationTests
 
-  def configure_generic_project(project)
+  def configure_rails_project(project)
+    project.rails_version = 3
   end
 
   def create_project
-    ProjectCreator.new.tap do |creator|
-      creator << GenericProject.new.tap do |project|
-        configure_generic_project(project)
+    super do |creator|
+      creator.add TestUnitProject do |project|
+        project.test_unit_version = '~> 2.5'
       end
-      creator << RailsProject.new.tap do |project|
-        project.rails_version = 3
-      end
-      creator << TestUnitProject.new.tap do |project|
-        project.test_framework_paths << 'test/unit'
-        project.test_framework_dependencies << ['test-unit', '~> 2.5']
-      end
+      creator.add RailsTestUnitProject
       yield creator if block_given?
-    end.create
+    end
   end
 
   def self.including_the_adapter_manually_works
@@ -43,7 +40,7 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
         end
       EOT
       result = project.run_test_file(file)
-      result.should be_success
+      result.should have_no_errors_or_failures
     end
   end
 
@@ -62,14 +59,14 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
         end
       EOT
       result = project.run_test_file(file)
-      result.should be_success
+      result.should have_no_errors_or_failures
     end
   end
 
   def self.using_rr_with_cucumber_works
     specify "using RR with Cucumber works" do
       project = create_project do |creator|
-        creator << CucumberProject.new
+        creator.add CucumberProject
       end
       result = project.run_command_within("bundle exec cucumber")
       result.should be_success
@@ -77,9 +74,9 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when Bundler is autorequiring RR, and RR is listed before the test framework in the Gemfile' do
-    def configure_generic_project(project)
+    def configure_rails_project(project)
       project.autorequire_gems = true
-      project.require_rr_before_test_framework = true
+      project.include_rr_before_test_framework = true
     end
 
     including_the_adapter_manually_works
@@ -87,9 +84,9 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when Bundler is autorequiring RR, and RR is listed after the test framework in the Gemfile' do
-    def configure_generic_project(project)
+    def configure_rails_project(project)
       project.autorequire_gems = true
-      project.require_rr_before_test_framework = false
+      project.include_rr_before_test_framework = false
     end
 
     rr_hooks_into_the_test_framework_automatically
@@ -98,9 +95,9 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when RR is being required manually, and RR is required before the test framework' do
-    def configure_generic_project(project)
+    def configure_rails_project(project)
       project.autorequire_gems = false
-      project.require_rr_before_test_framework = true
+      project.include_rr_before_test_framework = true
     end
 
     including_the_adapter_manually_works
@@ -108,9 +105,9 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when RR is being required manually, and RR is required after the test framework' do
-    def configure_generic_project(project)
+    def configure_rails_project(project)
       project.autorequire_gems = false
-      project.require_rr_before_test_framework = false
+      project.include_rr_before_test_framework = false
     end
 
     rr_hooks_into_the_test_framework_automatically
@@ -128,14 +125,16 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
         end
       EOT
       result = project.run_test_file(file)
-      result.should fail_with_output(/1 failed/)
+      result.should fail_with_output(/1 failure/)
     end
 
     specify "the database is properly rolled back after an RR error" do
       project = create_project
-      project.exec "echo 'create table if not exists people (name varchar(255));' | sqlite3 #{project.database_file}"
+      project.exec "echo 'create table if not exists people (name varchar(255));' | sqlite3 #{project.database_file_path}"
       project.add_file 'app/models/person.rb', <<-EOT
-        class Person < ActiveRecord::Base; end
+        class Person < ActiveRecord::Base
+          attr_accessible :name
+        end
       EOT
       file = project.build_test_file <<-EOT
         class FooTest < ActiveRecord::TestCase
@@ -146,8 +145,10 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
           end
         end
       EOT
-      expect { project.run_test_file(file) }.
-        to_not change_database_table(project, :people)
+      expect {
+        result = project.run_test_file(file)
+        result.should be_success
+      }.to leave_database_table_clear(project, :people)
     end
 
     specify "throwing an error in teardown doesn't mess things up" do

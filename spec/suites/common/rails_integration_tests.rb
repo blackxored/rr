@@ -1,41 +1,48 @@
 require File.expand_path('../adapter_integration_tests', __FILE__)
-require File.expand_path('../../../adapter_integration_tests/rails_project', __FILE__)
+require File.expand_path('../rails_project', __FILE__)
+require File.expand_path('../project_creator', __FILE__)
 
 module RailsIntegrationTests
-  class ChangeDatabaseTableMatcher < Struct.new(:project, :table_name)
-    def description
-      "change the database table #{table_name}"
-    end
-
+  class LeaveDatabaseTableClearMatcher < Struct.new(:project, :table_name)
     def matches?(block)
       return_value = true
-      return_value &&= table_has_no_rows?
+      @old_number_of_rows = number_of_rows
       block.call
-      return_value &&= table_has_no_rows?
-      return_value
+      @new_number_of_rows = number_of_rows
+      @old_number_of_rows == 0 && @new_number_of_rows == 0
     end
 
-    def table_has_no_rows?
-      @number_of_rows = `echo "select count(*) from #{project.table_name};" | sqlite3 #{project.sqlite_db_file_path}`.chomp
-      @number_of_rows.to_i == 0
+    def description
+      "leave the database table #{table_name} unchanged"
     end
 
     def failure_message_for_should
-      raise "You should call this with should_not"
+      "Expected for database table #{table_name} to have been left clear, but it was changed (there are now #{@new_number_of_rows} rows)"
     end
 
-    def failure_messsage_for_should_not
-      "Expected for database table #{table_name} to not have been changed, but it was (number of rows: #{@number_of_rows})"
+    def failure_message_for_should_not
+      "Expected for database table #{table_name} to not have been left clear, but it was"
+    end
+
+    private
+
+    def number_of_rows
+      `echo "select count(*) from #{table_name};" | sqlite3 #{project.database_file_path}`.chomp.to_i
     end
   end
 
   include AdapterIntegrationTests
 
-  #def build_project
-  #  AdapterIntegrationTests::RailsProject.new
-  #end
+  def create_project
+    ProjectCreator.new.tap do |creator|
+      creator.add RailsProject do |project|
+        configure_rails_project(project)
+      end
+      yield creator if block_given?
+    end.create
+  end
 
-  def change_database_table(table_name)
-    ChangeDatabaseTableMatcher.new(table_name)
+  def leave_database_table_clear(project, table_name)
+    LeaveDatabaseTableClearMatcher.new(project, table_name)
   end
 end

@@ -1,3 +1,4 @@
+=begin
 module AdapterIntegrationTests
   class RailsTestFile
     attr_accessor \
@@ -49,3 +50,4 @@ module AdapterIntegrationTests
     end
   end
 end
+=end
