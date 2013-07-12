@@ -24,12 +24,11 @@ class GenericProject
     end
 
     attr_reader :project
-    attr_accessor :directory, :program, :env
+    attr_accessor :directory, :program
 
     def initialize(project)
       @project = project
       self.directory = project.test_dir
-      self.env = project.test_runner_env
       self.program = project.test_runner_program
     end
 
@@ -40,7 +39,7 @@ class GenericProject
         f.write(content)
       end
       command = "bundle exec #{program} #{test_file_path}"
-      project.run_command_within(command, :env => env)
+      project.run_command_within(command)
     ensure
       FileUtils.rm_f(test_file_path) if test_file_path
     end
@@ -88,10 +87,6 @@ class GenericProject
 
   def test_runner_program
     raise NotImplementedError
-  end
-
-  def test_runner_env
-    {}
   end
 
   def create
@@ -150,11 +145,6 @@ class GenericProject
         export BUNDLE_GEMFILE=""
         export RUBYOPT=""
       EOT
-    end
-    if opts[:env]
-      contents << opts[:env].
-        map { |key, value| "export #{key}=#{value.to_s.inspect}\n" }.
-        join
     end
     contents << <<-EOT
       #{command}

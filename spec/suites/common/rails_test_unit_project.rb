@@ -10,8 +10,4 @@ module RailsTestUnitProject
       require '#{File.join(root_dir, 'spec/suites/common/test_unit_like_adapter_tests')}'
     EOT
   end
-
-  def test_runner_env
-    {'RAILS_ENV' => 'test'}
-  end
 end
