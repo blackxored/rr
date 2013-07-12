@@ -38,24 +38,17 @@ module AdapterIntegrationTests
     end
   end
 
-  def build_project
-    AdapterIntegrationTests::GenericProject.new
+  def create_project
+    ProjectCreator.new.tap do |creator|
+      configure_project_creator(creator)
+      yield creator if block_given?
+    end.create
   end
 
-  #def create_project(project_class)
-    #project_class.new.tap do |project|
-      #configure_project(project)
-      #yield project if block_given?
-      #project.create
-    #end
-  #end
+  def configure_project_creator(creator)
+  end
 
   def build_test_file(body, options={})
-    # If this is a Rails app then the include_rr_before_test_framework option
-    # doesn't actually require rr before requiring the test framework
-    # since we won't actually require the test framework. Instead, it will set
-    # require: false for the test framework in question and then explicitly
-    # require it after
     TestFile.new(body, options)
   end
 
@@ -66,25 +59,4 @@ module AdapterIntegrationTests
   def have_no_errors_or_failures
     HaveNoErrorsOrFailuresMatcher.new
   end
-
-=begin
-  def all_tests_should_run
-    project = create_project
-    yield project
-    output = project.run_test_file
-    if output =~ /(\d+) failure/
-      $1.should eq '0'
-    end
-    if output =~ /(\d+) error/
-      $1.should eq '0'
-    end
-  end
-
-  def tests_should_fail_with(message)
-    project = create_project
-    yield project
-    output = project.run_test_file
-    output.should match message
-  end
-=end
 end

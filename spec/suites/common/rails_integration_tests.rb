@@ -5,7 +5,6 @@ require File.expand_path('../project_creator', __FILE__)
 module RailsIntegrationTests
   class LeaveDatabaseTableClearMatcher < Struct.new(:project, :table_name)
     def matches?(block)
-      return_value = true
       @old_number_of_rows = number_of_rows
       block.call
       @new_number_of_rows = number_of_rows
@@ -33,13 +32,9 @@ module RailsIntegrationTests
 
   include AdapterIntegrationTests
 
-  def create_project
-    ProjectCreator.new.tap do |creator|
-      creator.add RailsProject do |project|
-        configure_rails_project(project)
-      end
-      yield creator if block_given?
-    end.create
+  def configure_project_creator(creator)
+    super
+    creator.add RailsProject
   end
 
   def leave_database_table_clear(project, table_name)

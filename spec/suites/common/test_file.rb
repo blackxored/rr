@@ -4,7 +4,6 @@ class TestFile
     :test_framework_paths,
     :prelude,
     :include_rr_before_test_framework,
-    #:lines_to_require_helpers,
     :before_require_test_framework,
     :after_require_test_framework,
     :autorequire_gems
@@ -15,23 +14,18 @@ class TestFile
   end
 
   def to_s
-    pre_body + body
-  end
-
-  def pre_body
-    lines = []
-    lines << prelude if prelude
+    prelude_lines = []
+    prelude_lines << prelude if prelude
     unless autorequire_gems
-      #lines += lines_to_require_helpers
       if include_rr_before_test_framework
-        lines << "require 'rr'"
-        lines += lines_to_require_test_framework
+        prelude_lines << "require 'rr'"
+        prelude_lines += lines_to_require_test_framework
       else
-        lines += lines_to_require_test_framework
-        lines << "require 'rr'"
+        prelude_lines += lines_to_require_test_framework
+        prelude_lines << "require 'rr'"
       end
     end
-    join_lines(lines)
+    join_lines(prelude_lines) + body
   end
 
   def lines_to_require_test_framework

@@ -1,31 +1,35 @@
 class ProjectCreator
   def initialize
-    @projects = []
+    @mixins = []
+    @configurators = []
   end
 
-  def add(mixin, &configurator)
-    configurator ||= proc {}
-    @projects << [mixin, configurator]
+  def add(mixin)
+    @mixins << mixin
+  end
+
+  def configure(&configurator)
+    raise ArgumentError, "Block not given" unless configurator
+    @configurators << configurator
   end
 
   def create
-    projects = @projects
+    mixins = @mixins
+    configurators = @configurators
 
     project_class = Class.new(GenericProject) do
-      projects.each do |mixin, configurator|
+      mixins.each do |mixin|
         include mixin
       end
 
       define_method(:initialize) do |*args, &block|
-        super(*args, &block)
-        projects.each do |mixin, configurator|
+        configurators.each do |configurator|
           configurator.call(self)
         end
+        super(*args, &block)
       end
     end
 
-    project = project_class.new
-    project.create
-    project
+    project_class.create
   end
 end

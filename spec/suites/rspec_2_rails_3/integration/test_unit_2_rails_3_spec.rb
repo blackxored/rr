@@ -1,63 +1,55 @@
 require File.expand_path('../../spec_helper', __FILE__)
 require File.expand_path('../../../common/rails_integration_tests', __FILE__)
-require File.expand_path('../../../common/test_unit_project', __FILE__)
 require File.expand_path('../../../common/rails_test_unit_project', __FILE__)
 require File.expand_path('../../../common/cucumber_project', __FILE__)
 
 describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   include RailsIntegrationTests
 
-  def configure_rails_project(project)
-    project.rails_version = 3
-  end
-
-  def create_project
-    super do |creator|
-      creator.add TestUnitProject do |project|
-        project.test_unit_version = '~> 2.5'
-      end
-      creator.add RailsTestUnitProject
-      yield creator if block_given?
+  def configure_project_creator(creator)
+    super
+    creator.add RailsTestUnitProject
+    creator.configure do |project|
+      project.rails_version = 3
+      project.test_unit_version = '~> 2.5'
     end
   end
 
-  def self.including_the_adapter_manually_works
+  def working_test_case
+    <<-EOT
+      class FooTest < ActiveSupport::TestCase
+        include TestUnitLikeAdapterTests
+        def matching_adapters
+          #{matching_adapters.inspect}
+        end
+
+        def test_foo
+          object = Object.new
+          mock(object).foo
+          object.foo
+        end
+      end
+    EOT
+  end
+
+  def self.including_the_adapter_manually_works(args={})
     specify "including the adapter manually works" do
       project = create_project
       file = project.build_test_file <<-EOT
         class ActiveSupport::TestCase
           include RR::Adapters::TestUnit
         end
-
-        class FooTest < ActiveSupport::TestCase
-          # TODO: Do we need to include adapter tests here?
-
-          def test_foo
-            object = Object.new
-            mock(object).foo
-            object.foo
-          end
-        end
+        #{working_test_case}
       EOT
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
     end
   end
 
-  def self.rr_hooks_into_the_test_framework_automatically
+  def self.rr_hooks_into_the_test_framework_automatically(args={})
     specify "RR hooks into the test framework automatically" do
       project = create_project
-      file = project.build_test_file <<-EOT
-        class FooTest < ActiveSupport::TestCase
-          # TODO: Do we need to include adapter tests here?
-
-          def test_foo
-            object = Object.new
-            mock(object).foo
-            object.foo
-          end
-        end
-      EOT
+      file = project.build_test_file(working_test_case)
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
     end
@@ -74,9 +66,16 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when Bundler is autorequiring RR, and RR is listed before the test framework in the Gemfile' do
-    def configure_rails_project(project)
-      project.autorequire_gems = true
-      project.include_rr_before_test_framework = true
+    def configure_project_creator(creator)
+      super
+      creator.configure do |project|
+        project.autorequire_gems = true
+        project.include_rr_before_test_framework = true
+      end
+    end
+
+    def matching_adapters
+      [:TestUnit2]
     end
 
     including_the_adapter_manually_works
@@ -84,9 +83,16 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when Bundler is autorequiring RR, and RR is listed after the test framework in the Gemfile' do
-    def configure_rails_project(project)
-      project.autorequire_gems = true
-      project.include_rr_before_test_framework = false
+    def configure_project_creator(creator)
+      super
+      creator.configure do |project|
+        project.autorequire_gems = true
+        project.include_rr_before_test_framework = false
+      end
+    end
+
+    def matching_adapters
+      [:TestUnit2, :TestUnit2ActiveSupport]
     end
 
     rr_hooks_into_the_test_framework_automatically
@@ -95,9 +101,16 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when RR is being required manually, and RR is required before the test framework' do
-    def configure_rails_project(project)
-      project.autorequire_gems = false
-      project.include_rr_before_test_framework = true
+    def configure_project_creator(creator)
+      super
+      creator.configure do |project|
+        project.autorequire_gems = false
+        project.include_rr_before_test_framework = true
+      end
+    end
+
+    def matching_adapters
+      [:TestUnit2]
     end
 
     including_the_adapter_manually_works
@@ -105,9 +118,16 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
   end
 
   context 'when RR is being required manually, and RR is required after the test framework' do
-    def configure_rails_project(project)
-      project.autorequire_gems = false
-      project.include_rr_before_test_framework = false
+    def configure_project_creator(creator)
+      super
+      creator.configure do |project|
+        project.autorequire_gems = false
+        project.include_rr_before_test_framework = false
+      end
+    end
+
+    def matching_adapters
+      [:TestUnit2, :TestUnit2ActiveSupport]
     end
 
     rr_hooks_into_the_test_framework_automatically

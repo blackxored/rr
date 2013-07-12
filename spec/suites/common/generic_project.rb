@@ -1,4 +1,3 @@
-require File.expand_path('../runner', __FILE__)
 require File.expand_path('../test_file', __FILE__)
 
 require 'session'
@@ -25,11 +24,12 @@ class GenericProject
     end
 
     attr_reader :project
-    attr_accessor :directory, :program
+    attr_accessor :directory, :program, :env
 
     def initialize(project)
       @project = project
       self.directory = project.test_dir
+      self.env = project.test_runner_env
       self.program = project.test_runner_program
     end
 
@@ -40,10 +40,14 @@ class GenericProject
         f.write(content)
       end
       command = "bundle exec #{program} #{test_file_path}"
-      project.run_command_within(command)
+      project.run_command_within(command, :env => env)
     ensure
       FileUtils.rm_f(test_file_path) if test_file_path
     end
+  end
+
+  def self.create
+    new.tap { |project| project.create }
   end
 
   attr_accessor \
@@ -84,6 +88,10 @@ class GenericProject
 
   def test_runner_program
     raise NotImplementedError
+  end
+
+  def test_runner_env
+    {}
   end
 
   def create
@@ -130,31 +138,42 @@ class GenericProject
   end
 
   def run_command(command, opts={})
-    if opts[:without_bundler_sandbox]
-      exec(command)
-    else
+    f = Tempfile.new('rr-integration-test-file')
+    contents = ""
+    unless opts[:without_bundler_sandbox]
       # Bundler will set RUBYOPT to "-I <path to bundler> -r bundler/setup".
       # This is unfortunate as it causes Bundler to be loaded before we
       # load Bundler in RR::Test.setup_test_suite, thereby rendering our
       # second Bundler.setup a no-op.
-      f = Tempfile.new('rr-integration-test-file')
-      f.write <<-EOT
+      contents << <<-EOT
         export BUNDLE_BIN_PATH=""
         export BUNDLE_GEMFILE=""
         export RUBYOPT=""
-        #{command}
-        exit $?
       EOT
-      f.close
-      # WOW this is hacky
-      exec "bash #{f.path}"
     end
+    if opts[:env]
+      contents << opts[:env].
+        map { |key, value| "export #{key}=#{value.to_s.inspect}\n" }.
+        join
+    end
+    contents << <<-EOT
+      #{command}
+      exit $?
+    EOT
+    if RR.debug?
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts contents
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    end
+    f.write(contents)
+    f.close
+    exec "bash #{f.path}"
   ensure
     f.unlink if f
   end
 
-  def run_command_within(command)
-    within { run_command(command) }
+  def run_command_within(command, opts={})
+    within { run_command(command, opts) }
   end
 
   def add_file(file_name, content)
@@ -200,7 +219,6 @@ class GenericProject
 
   def gem_dependency(name, *args)
     opts = args.last.is_a?(Hash) ? args.pop : {}
-    #opts[:require] = false if not autorequire_gems
     version = args.first
     str = "gem '#{name}'"
     str << ", '#{version}'" if version
@@ -216,9 +234,9 @@ class GenericProject
     rr_dependency = ['rr', rr_dependency_options]
 
     if include_rr_before_test_framework
-      deps.push(rr_dependency)
-    else
       deps.unshift(rr_dependency)
+    else
+      deps.push(rr_dependency)
     end
 
     deps
