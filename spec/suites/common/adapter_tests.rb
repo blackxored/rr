@@ -1,10 +1,6 @@
 require 'set'
 
 module AdapterTests
-  def test_the_correct_adapters_are_loaded
-    assert_equal Set.new(matching_adapters), Set.new(RR.loaded_adapter_names)
-  end
-
   def test_using_a_mock
     subject = Object.new
     mock(subject).foobar(1, 2) { :baz }
@@ -39,5 +35,11 @@ module AdapterTests
     assert_raise RR::Errors.error_class(:TimesCalledError) do
       RR.verify
     end
+  end
+
+  private
+
+  def assert_adapters_loaded(matching_adapters)
+    assert_equal Set.new(matching_adapters), Set.new(RR.loaded_adapter_names)
   end
 end

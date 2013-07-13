@@ -15,41 +15,47 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
     end
   end
 
-  def working_test_case
-    <<-EOT
-      class FooTest < ActiveSupport::TestCase
-        include TestUnitLikeAdapterTests
-        def matching_adapters
-          #{matching_adapters.inspect}
-        end
-
-        def test_foo
-          object = Object.new
-          mock(object).foo
-          object.foo
-        end
-      end
-    EOT
-  end
-
-  def self.including_the_adapter_manually_works(args={})
+  def self.including_the_adapter_manually_works
     specify "including the adapter manually works" do
       project = create_project
       file = project.build_test_file <<-EOT
         class ActiveSupport::TestCase
           include RR::Adapters::TestUnit
         end
-        #{working_test_case}
+
+        class FooTest < ActiveSupport::TestCase
+          include TestUnitLikeAdapterTests
+
+          def test_the_correct_adapters_are_loaded
+            assert_adapters_loaded #{matching_adapters.inspect}
+          end
+
+          def test_foo
+            object = Object.new
+            mock(object).foo
+            object.foo
+          end
+        end
       EOT
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
     end
   end
 
-  def self.rr_hooks_into_the_test_framework_automatically(args={})
+  def self.rr_hooks_into_the_test_framework_automatically
     specify "RR hooks into the test framework automatically" do
       project = create_project
-      file = project.build_test_file(working_test_case)
+      file = project.build_test_file <<-EOT
+        class FooTest < ActiveSupport::TestCase
+          include TestUnitLikeAdapterTests
+
+          def test_foo
+            object = Object.new
+            mock(object).foo
+            object.foo
+          end
+        end
+      EOT
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
     end
@@ -57,9 +63,10 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
 
   def self.using_rr_with_cucumber_works
     specify "using RR with Cucumber works" do
-      project = create_project do |creator|
+      project_creator = build_project_creator do |creator|
         creator.add CucumberProject
       end
+      project = project_creator.create
       result = project.run_command_within("bundle exec cucumber")
       result.should be_success
     end
@@ -110,7 +117,7 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
     end
 
     def matching_adapters
-      [:TestUnit2]
+      [:TestUnit2, :TestUnit2ActiveSupport]
     end
 
     including_the_adapter_manually_works
@@ -149,13 +156,26 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
     end
 
     specify "the database is properly rolled back after an RR error" do
-      project = create_project
-      project.exec "echo 'create table if not exists people (name varchar(255));' | sqlite3 #{project.database_file_path}"
-      project.add_file 'app/models/person.rb', <<-EOT
-        class Person < ActiveRecord::Base
-          attr_accessible :name
-        end
-      EOT
+      project = create_project do |project|
+        project.add_file 'app/models/person.rb', <<-EOT
+          class Person < ActiveRecord::Base
+            attr_accessible :name
+          end
+        EOT
+        project.add_file "db/migrate/#{Time.now.strftime("%Y%m%d%H%M%S")}_create_people.rb", <<-EOT
+          class CreatePeople < ActiveRecord::Migration
+            def up
+              create_table :people do |t|
+                t.string :name
+              end
+            end
+
+            def down
+              drop_table :people
+            end
+          end
+        EOT
+      end
       file = project.build_test_file <<-EOT
         class FooTest < ActiveRecord::TestCase
           def test_one
