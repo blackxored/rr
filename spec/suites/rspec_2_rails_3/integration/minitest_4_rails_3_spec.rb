@@ -15,23 +15,6 @@ describe 'Integration with MiniTest 4 and Rails 3' do
     end
   end
 
-  def working_test_case
-    <<-EOT
-      class FooTest < ActiveSupport::TestCase
-        include TestUnitLikeAdapterTests
-        def matching_adapters
-          #{matching_adapters.inspect}
-        end
-
-        def test_foo
-          object = Object.new
-          mock(object).foo
-          object.foo
-        end
-      end
-    EOT
-  end
-
   def self.including_the_adapter_manually_works(args={})
     specify "including the adapter manually works" do
       project = create_project
@@ -39,7 +22,18 @@ describe 'Integration with MiniTest 4 and Rails 3' do
         class ActiveSupport::TestCase
           include RR::Adapters::MiniTest
         end
-        #{working_test_case}
+
+        class FooTest < ActiveSupport::TestCase
+          def test_the_correct_adapters_are_loaded
+            assert_adapters_loaded #{matching_adapters.inspect}
+          end
+
+          def test_foo
+            object = Object.new
+            mock(object).foo
+            object.foo
+          end
+        end
       EOT
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
@@ -49,7 +43,17 @@ describe 'Integration with MiniTest 4 and Rails 3' do
   def self.rr_hooks_into_the_test_framework_automatically(args={})
     specify "RR hooks into the test framework automatically" do
       project = create_project
-      file = project.build_test_file(working_test_case)
+      file = project.build_test_file <<-EOT
+        class FooTest < ActiveSupport::TestCase
+          include TestUnitLikeAdapterTests
+
+          def test_foo
+            object = Object.new
+            mock(object).foo
+            object.foo
+          end
+        end
+      EOT
       result = project.run_test_file(file)
       result.should have_no_errors_or_failures
     end
