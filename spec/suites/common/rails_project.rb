@@ -27,6 +27,7 @@ module RailsProject
             <<: *development
         EOT
       end
+      run_command 'bundle exec rake db:migrate'
     end
   end
 

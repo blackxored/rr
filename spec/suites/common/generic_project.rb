@@ -16,7 +16,7 @@ class GenericProject
     end
   end
 
-  class Runner
+  class TestFileRunner
     def self.call(project)
       runner = new(project)
       yield runner
@@ -24,24 +24,30 @@ class GenericProject
     end
 
     attr_reader :project
-    attr_accessor :directory, :program
+    attr_accessor :directory, :filename, :command
 
     def initialize(project)
       @project = project
       self.directory = project.test_dir
-      self.program = project.test_runner_program
+      self.filename = project.test_filename
+      self.command = project.test_runner_command
     end
 
     def call(content)
-      test_file_path = File.join(directory, 'the_test.rb')
+      test_file_path = File.join(directory, filename)
+      if RR.debug?
+        puts "Test file path: #{test_file_path}"
+      end
       File.open(test_file_path, 'w') do |f|
-        puts content if RR.debug?
+        if RR.debug?
+          puts "~ Test file contents ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+          puts content
+          puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        end
         f.write(content)
       end
-      command = "bundle exec #{program} #{test_file_path}"
-      project.run_command_within(command)
-    ensure
-      FileUtils.rm_f(test_file_path) if test_file_path
+      full_command = "bundle exec #{command}"
+      project.run_command_within(full_command)
     end
   end
 
@@ -51,7 +57,6 @@ class GenericProject
 
   attr_accessor \
     :autorequire_gems,
-    :adapter_name,
     :include_rr_before_test_framework,
     :test_file_prelude
 
@@ -85,7 +90,11 @@ class GenericProject
     raise NotImplementedError
   end
 
-  def test_runner_program
+  def test_filename
+    raise NotImplementedError
+  end
+
+  def test_runner_command
     raise NotImplementedError
   end
 
@@ -95,16 +104,11 @@ class GenericProject
   end
 
   def build_test_file(body)
-    TestFile.new(body).tap do |file|
-      file.prelude = test_file_prelude
-      file.test_framework_paths = test_framework_paths
-      file.include_rr_before_test_framework = include_rr_before_test_framework
-      file.autorequire_gems = autorequire_gems
-    end
+    TestFile.new(self, body)
   end
 
   def run_test_file(file)
-    build_runner.call(file.to_s)
+    build_test_file_runner.call(file.to_s)
   end
 
   def within(&block)
@@ -117,16 +121,22 @@ class GenericProject
     command = command.dup
     command << ' 2>&1'
     bash = Session::Bash.new
-    puts command if RR.debug?
+    if RR.debug?
+      puts "Running: #{command}"
+    end
     stdout, _ = bash.execute(command)
     exit_status = bash.exit_status
     success = !!(exit_status == 0 || stdout =~ /Finished/)
     if RR.debug?
+      puts "~ Output from `#{command}` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
       puts stdout
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     end
     if not success
       msg = "Command failed: #{command}"
-      msg << "\n#{stdout}" unless RR.debug?
+      if RR.debug?
+        msg << "\n#{stdout}"
+      end
       abort msg
     end
     CommandResult.new(success, stdout)
@@ -147,11 +157,10 @@ class GenericProject
       EOT
     end
     contents << <<-EOT
-      #{command}
-      exit $?
+      exec #{command}
     EOT
     if RR.debug?
-      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts "~ File to run ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
       puts contents
       puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     end
@@ -186,8 +195,8 @@ class GenericProject
     FileUtils.cp(File.join(root_dir, filename), File.join(directory, dest_filename))
   end
 
-  def build_runner
-    Runner.new(self).tap do |runner|
+  def build_test_file_runner
+    TestFileRunner.new(self).tap do |runner|
       runner.directory = test_dir
     end
   end
@@ -198,13 +207,6 @@ class GenericProject
 
   def under_jruby?
     RUBY_PLATFORM =~ /java/
-  end
-
-  def appraisal_name
-    parts = []
-    parts << (ruby_18? ? 'ruby_18' : 'ruby_19')
-    parts << adapter_name
-    parts.join('_')
   end
 
   def gem_dependency(name, *args)

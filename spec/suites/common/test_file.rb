@@ -8,9 +8,12 @@ class TestFile
     :after_require_test_framework,
     :autorequire_gems
 
-  def initialize(body)
+  def initialize(project, body)
+    self.prelude = project.test_file_prelude
+    self.test_framework_paths = project.test_framework_paths
+    self.include_rr_before_test_framework = project.include_rr_before_test_framework
+    self.autorequire_gems = project.autorequire_gems
     self.body = body
-    self.test_framework_paths = []
   end
 
   def to_s

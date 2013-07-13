@@ -10,4 +10,8 @@ module RailsTestUnitProject
       require '#{File.join(root_dir, 'spec/suites/common/test_unit_like_adapter_tests')}'
     EOT
   end
+
+  def test_dir
+    File.join(directory, 'test', 'unit')
+  end
 end
