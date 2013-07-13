@@ -1,2 +1,3 @@
---format documentation
+--require ./spec/full_example_name_formatter
+--format FullExampleNameFormatter
 --color
