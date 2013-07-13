@@ -2,6 +2,7 @@ class ProjectCreator
   def initialize
     @mixins = []
     @configurators = []
+    yield self if block_given?
   end
 
   def add(mixin)
@@ -13,7 +14,7 @@ class ProjectCreator
     @configurators << configurator
   end
 
-  def create
+  def create(&block)
     mixins = @mixins
     configurators = @configurators
 
@@ -23,13 +24,14 @@ class ProjectCreator
       end
 
       define_method(:initialize) do |*args, &block|
+        super(*args, &block)
         configurators.each do |configurator|
+          puts "Got configurator: #{configurator.inspect}" if RR.debug?
           configurator.call(self)
         end
-        super(*args, &block)
       end
     end
 
-    project_class.create
+    project_class.create(&block)
   end
 end

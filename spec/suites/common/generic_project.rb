@@ -51,8 +51,10 @@ class GenericProject
     end
   end
 
-  def self.create
-    new.tap { |project| project.create }
+  def self.create(&block)
+    new(&block).tap do |project|
+      project.create
+    end
   end
 
   attr_accessor \
@@ -68,6 +70,7 @@ class GenericProject
     @test_framework_paths = []
     @test_framework_dependencies = []
     @autorequire_gems = true
+    yield self if block_given?
   end
 
   def root_dir
@@ -132,14 +135,15 @@ class GenericProject
       puts stdout
       puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     end
-    if not success
-      msg = "Command failed: #{command}"
-      if RR.debug?
-        msg << "\n#{stdout}"
-      end
-      abort msg
-    end
     CommandResult.new(success, stdout)
+  end
+
+  def exec!(command)
+    result = exec(command)
+    if not result.success?
+      raise "Command failed: #{command}"
+    end
+    result
   end
 
   def run_command(command, opts={})
@@ -176,7 +180,16 @@ class GenericProject
   end
 
   def add_file(file_name, content)
-    File.open(File.join(directory, file_name), 'w') { |f| f.write(content) }
+    full_file_name = File.join(directory, file_name)
+    FileUtils.mkdir_p File.dirname(full_file_name)
+    File.open(full_file_name, 'w') do |f|
+      if RR.debug?
+        puts "~ Adding file #{full_file_name} ~~~~~~~~~~~~~~~~~~~~~~~~"
+        puts content
+        puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      end
+      f.write(content)
+    end
   end
 
   def build_partial_gemfile
@@ -219,6 +232,11 @@ class GenericProject
   end
 
   def gem_dependencies
+    if RR.debug?
+      puts "Include RR before test framework? #{include_rr_before_test_framework.inspect}"
+      puts "Autorequiring gems? #{autorequire_gems.inspect}"
+    end
+
     deps = test_framework_dependencies.dup
 
     rr_dependency_options = {:path => root_dir}

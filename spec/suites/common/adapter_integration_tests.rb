@@ -38,11 +38,15 @@ module AdapterIntegrationTests
     end
   end
 
-  def create_project
-    ProjectCreator.new.tap do |creator|
+  def create_project(&block)
+    build_project_creator.create(&block)
+  end
+
+  def build_project_creator
+    ProjectCreator.new do |creator|
       configure_project_creator(creator)
       yield creator if block_given?
-    end.create
+    end
   end
 
   def configure_project_creator(creator)

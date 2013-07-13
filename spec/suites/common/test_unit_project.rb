@@ -1,10 +1,10 @@
 module TestUnitProject
   attr_accessor :test_unit_version
 
-  def initialize
-    super
+  def create
     test_framework_paths << 'test/unit'
     test_framework_dependencies << ['test-unit', test_unit_version]
+    super
   end
 
   def test_dir

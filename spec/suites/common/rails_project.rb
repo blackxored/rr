@@ -1,6 +1,11 @@
 module RailsProject
   attr_accessor :rails_version
 
+  def initialize
+    @file_creators = []
+    super
+  end
+
   def directory
     File.join(root_dir, 'tmp', 'rr-integration-tests', 'testapp')
   end
@@ -16,6 +21,7 @@ module RailsProject
         contents << "\n\n" + build_partial_gemfile
         f.write(contents)
       end
+      create_additional_files
       run_command('bundle env') if RR.debug?
       run_command('bundle check || bundle install')
       File.open('config/database.yml', 'w') do |f|
@@ -29,6 +35,10 @@ module RailsProject
       end
       run_command 'bundle exec rake db:migrate'
     end
+  end
+
+  def add_file(file_name, content)
+    @file_creators << lambda { super(file_name, content) }
   end
 
   def build_partial_gemfile
@@ -45,5 +55,11 @@ module RailsProject
 
   def database_file_path
     File.join(directory, 'db/test.sqlite3')
+  end
+
+  private
+
+  def create_additional_files
+    @file_creators.each { |creator| creator.call }
   end
 end

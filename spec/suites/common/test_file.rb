@@ -18,15 +18,14 @@ class TestFile
 
   def to_s
     prelude_lines = []
-    prelude_lines << prelude if prelude
-    unless autorequire_gems
-      if include_rr_before_test_framework
-        prelude_lines << "require 'rr'"
-        prelude_lines += lines_to_require_test_framework
-      else
-        prelude_lines += lines_to_require_test_framework
-        prelude_lines << "require 'rr'"
-      end
+    prelude_lines.concat lines_to_require_test_framework
+    if include_rr_before_test_framework
+      prelude_lines.unshift "require 'rr'"
+    else
+      prelude_lines.push "require 'rr'"
+    end
+    if prelude
+      prelude_lines.unshift prelude
     end
     join_lines(prelude_lines) + body
   end

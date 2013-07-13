@@ -26,7 +26,8 @@ module RailsIntegrationTests
     private
 
     def number_of_rows
-      `echo "select count(*) from #{table_name};" | sqlite3 #{project.database_file_path}`.chomp.to_i
+      result = project.exec!("echo 'select count(*) from #{table_name};' | sqlite3 #{project.database_file_path}")
+      result.output.chomp.to_i
     end
   end
 
