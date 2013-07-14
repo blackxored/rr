@@ -1,8 +1,9 @@
-require File.expand_path('../test_file', __FILE__)
+require File.expand_path('../generator', __FILE__)
+require File.expand_path('../test_file_generator', __FILE__)
 
 require 'session'
 
-class GenericProject
+class ProjectGenerator
   class CommandResult
     attr_reader :output
 
@@ -16,10 +17,10 @@ class GenericProject
     end
   end
 
-  class TestFileRunner
+  class TestsRunner
     def self.call(project)
       runner = new(project)
-      yield runner
+      yield runner if block_given?
       runner.call
     end
 
@@ -33,44 +34,27 @@ class GenericProject
       self.command = project.test_runner_command
     end
 
-    def call(content)
-      test_file_path = File.join(directory, filename)
-      if RR.debug?
-        puts "Test file path: #{test_file_path}"
-      end
-      File.open(test_file_path, 'w') do |f|
-        if RR.debug?
-          puts "~ Test file contents ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-          puts content
-          puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        end
-        f.write(content)
-      end
+    def call
       full_command = "bundle exec #{command}"
       project.run_command_within(full_command)
     end
   end
 
-  def self.create(&block)
-    new(&block).tap do |project|
-      project.create
-    end
-  end
+  include Generator
 
   attr_accessor \
     :autorequire_gems,
-    :include_rr_before_test_framework,
-    :test_file_prelude
+    :include_rr_before_test_framework
 
   attr_reader \
-    :test_framework_paths,
-    :test_framework_dependencies
+    :test_dependencies
 
-  def initialize
-    @test_framework_paths = []
-    @test_framework_dependencies = []
-    @autorequire_gems = true
-    yield self if block_given?
+  def setup
+    super
+    self.autorequire_gems = true
+    self.include_rr_before_test_framework = false
+    @test_dependencies = []
+    @number_of_test_files = 0
   end
 
   def root_dir
@@ -101,17 +85,18 @@ class GenericProject
     raise NotImplementedError
   end
 
-  def create
+  def call
     FileUtils.rm_rf directory
     FileUtils.mkdir_p File.dirname(directory)
   end
 
-  def build_test_file(body)
-    TestFile.new(self, body)
+  def add_test_file(&block)
+    test_file_generator.call(self, @number_of_test_files, &block)
+    @number_of_test_files += 1
   end
 
-  def run_test_file(file)
-    build_test_file_runner.call(file.to_s)
+  def run_tests
+    TestsRunner.call(self)
   end
 
   def within(&block)
@@ -198,6 +183,10 @@ class GenericProject
       join("\n")
   end
 
+  def test_file_generator
+    @test_file_generator ||= TestFileGenerator.factory
+  end
+
   private
 
   def create_link(filename, dest_filename = filename)
@@ -206,12 +195,6 @@ class GenericProject
 
   def copy_file(filename, dest_filename = filename)
     FileUtils.cp(File.join(root_dir, filename), File.join(directory, dest_filename))
-  end
-
-  def build_test_file_runner
-    TestFileRunner.new(self).tap do |runner|
-      runner.directory = test_dir
-    end
   end
 
   def ruby_18?
@@ -237,7 +220,7 @@ class GenericProject
       puts "Autorequiring gems? #{autorequire_gems.inspect}"
     end
 
-    deps = test_framework_dependencies.dup
+    deps = test_dependencies.dup
 
     rr_dependency_options = {:path => root_dir}
     rr_dependency_options[:require] = false unless autorequire_gems

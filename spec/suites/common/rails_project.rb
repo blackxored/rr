@@ -1,16 +1,16 @@
 module RailsProject
   attr_accessor :rails_version
 
-  def initialize
-    @file_creators = []
+  def setup
     super
+    @file_creators = []
   end
 
   def directory
     File.join(root_dir, 'tmp', 'rr-integration-tests', 'testapp')
   end
 
-  def create
+  def call
     super
     # remember that this has to be run with `bundle exec` to catch the correct
     # 'rails' executable (rails 3 or rails 4)!
@@ -39,6 +39,36 @@ module RailsProject
 
   def add_file(file_name, content)
     @file_creators << lambda { super(file_name, content) }
+  end
+
+  def add_model_and_migration(model_name, table_name, attributes)
+    model_class_name = model_name.to_s.capitalize
+    symbolized_attribute_names = attributes.keys.map {|v| ":#{v}" }.join(', ')
+    migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S")
+    camelized_table_name = table_name.to_s.capitalize
+    migration_column_definitions = attributes.map do |name, type|
+      "t.#{type} :#{name}"
+    end.join("\n")
+
+    add_file "app/models/#{model_name}.rb", <<-EOT
+      class #{model_class_name} < ActiveRecord::Base
+        attr_accessible #{symbolized_attribute_names}
+      end
+    EOT
+
+    add_file "db/migrate/#{migration_timestamp}_create_#{table_name}.rb", <<-EOT
+      class Create#{camelized_table_name} < ActiveRecord::Migration
+        def up
+          create_table :#{table_name} do |t|
+            #{migration_column_definitions}
+          end
+        end
+
+        def down
+          drop_table :#{table_name}
+        end
+      end
+    EOT
   end
 
   def build_partial_gemfile

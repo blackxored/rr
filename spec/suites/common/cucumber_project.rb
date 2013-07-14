@@ -1,7 +1,11 @@
 module CucumberProject
-  def create
-    test_framework_dependencies << ['cucumber-rails', '~> 1.3.1', :require => false]
-    test_framework_dependencies << ['database_cleaner']
+  def setup
+    super
+    test_dependencies << ['cucumber-rails', '~> 1.3.1', :require => false]
+    test_dependencies << ['database_cleaner']
+  end
+
+  def call
     super
     run_command_within('bundle exec rails generate cucumber:install')
   end

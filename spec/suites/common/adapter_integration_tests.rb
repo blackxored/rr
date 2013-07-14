@@ -1,4 +1,4 @@
-require File.expand_path('../generic_project', __FILE__)
+require File.expand_path('../project_generator', __FILE__)
 
 module AdapterIntegrationTests
   class FailWithOutputMatcher < Struct.new(:pattern)
@@ -22,7 +22,7 @@ module AdapterIntegrationTests
   class HaveNoErrorsOrFailuresMatcher
     def matches?(result)
       match = result.output.match(/(\d+) error|(\d+) failure/)
-      !match.captures.any? {|n| n && n != '0' }
+      !match || match.captures.all? {|n| !n || n == '0' }
     end
 
     def description
@@ -38,22 +38,18 @@ module AdapterIntegrationTests
     end
   end
 
-  def create_project(&block)
-    build_project_creator.create(&block)
-  end
-
-  def build_project_creator
-    ProjectCreator.new do |creator|
-      configure_project_creator(creator)
-      yield creator if block_given?
+  def build_project_generator
+    ProjectGenerator.factory do |generator|
+      configure_project_generator(generator)
+      yield generator if block_given?
     end
   end
 
-  def configure_project_creator(creator)
+  def generate_project(&block)
+    build_project_generator.new(&block).tap { |project| project.call }
   end
 
-  def build_test_file(body, options={})
-    TestFile.new(body, options)
+  def configure_project_generator(generator)
   end
 
   def fail_with_output(pattern)
