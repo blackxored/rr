@@ -31,6 +31,14 @@ class TestCaseGenerator
     @number_of_tests += 1
   end
 
+  def add_working_test
+    add_test <<-EOT
+      object = Object.new
+      mock(object).foo
+      object.foo
+    EOT
+  end
+
   def call
     lines = []
     lines << @prelude

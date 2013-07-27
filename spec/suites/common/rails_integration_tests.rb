@@ -1,6 +1,5 @@
 require File.expand_path('../adapter_integration_tests', __FILE__)
 require File.expand_path('../rails_project', __FILE__)
-require File.expand_path('../rails_test_unit_like_file', __FILE__)
 
 module RailsIntegrationTests
   class LeaveDatabaseTableClearMatcher < Struct.new(:project, :table_name)
@@ -36,13 +35,6 @@ module RailsIntegrationTests
   def configure_project_generator(generator)
     super
     generator.mixin RailsProject
-    generator.configure do |project|
-      project.test_file_generator.configure do |file|
-        file.test_case_generator.configure do |test_case|
-          test_case.superclass = 'ActiveSupport::TestCase'
-        end
-      end
-    end
   end
 
   def leave_database_table_clear(project, table_name)

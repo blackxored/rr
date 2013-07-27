@@ -1,8 +1,26 @@
 require File.expand_path('../adapter_tests', __FILE__)
 
 module TestUnitLikeAdapterTests
-  def self.included(base)
-    base.class_eval { include AdapterTests }
+  include AdapterTests
+
+  def test_that_stubs_work
+    assert_stubs_work
+  end
+
+  def test_that_mocks_work
+    assert_mocks_work
+  end
+
+  def test_that_stub_proxies_work
+    assert_stub_proxies_work
+  end
+
+  def test_that_mock_proxies_work
+    assert_mock_proxies_work
+  end
+
+  def test_that_times_called_verifications_work
+    assert_times_called_verifications_work
   end
 
   def test_using_assert_received
@@ -17,5 +35,9 @@ module TestUnitLikeAdapterTests
     assert_raise(error_class) do
       assert_received(subject) {|s| s.foobar(1, 2, 3) }
     end
+  end
+
+  def assert_subset(subset, set)
+    assert subset.proper_subset?(set), "Set 1 was not a subset of set 2.\nSet 1: #{subset.inspect}\nSet 2: #{set.inspect}"
   end
 end

@@ -25,18 +25,16 @@ class ProjectGenerator
     end
 
     attr_reader :project
-    attr_accessor :directory, :filename, :command
+    attr_accessor :command
 
     def initialize(project)
       @project = project
-      self.directory = project.test_dir
-      self.filename = project.test_filename
       self.command = project.test_runner_command
     end
 
     def call
-      full_command = "bundle exec #{command}"
-      project.run_command_within(full_command)
+      match = command.match(/^((?:\w+=[^ ]+ )*)(.+)$/)
+      project.run_command_within("bundle exec #{match[2]}", :env => match[1])
     end
   end
 
@@ -47,14 +45,18 @@ class ProjectGenerator
     :include_rr_before_test_framework
 
   attr_reader \
-    :test_dependencies
+    :gem_dependencies,
+    :test_requires,
+    :prelude
 
   def setup
     super
-    self.autorequire_gems = true
+    self.autorequire_gems = false
     self.include_rr_before_test_framework = false
-    @test_dependencies = []
+    @gem_dependencies = []
+    @test_requires = []
     @number_of_test_files = 0
+    @prelude = ""
   end
 
   def root_dir
@@ -73,10 +75,6 @@ class ProjectGenerator
     File.join(directory, '.bundle')
   end
 
-  def test_dir
-    raise NotImplementedError
-  end
-
   def test_filename
     raise NotImplementedError
   end
@@ -88,6 +86,18 @@ class ProjectGenerator
   def call
     FileUtils.rm_rf directory
     FileUtils.mkdir_p File.dirname(directory)
+  end
+
+  def add_to_prelude(string)
+    test_file_generator.configure do |file|
+      file.add_to_prelude(string)
+    end
+  end
+
+  def add_to_test_requires(path)
+    test_file_generator.configure do |file|
+      file.add_to_requires(path)
+    end
   end
 
   def add_test_file(&block)
@@ -145,9 +155,12 @@ class ProjectGenerator
         export RUBYOPT=""
       EOT
     end
-    contents << <<-EOT
-      exec #{command}
-    EOT
+    if opts[:env]
+      opts[:env].split(' ').each do |pair|
+        contents << "export #{pair}\n"
+      end
+    end
+    contents << "exec #{command}\n"
     if RR.debug?
       puts "~ File to run ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
       puts contents
@@ -178,13 +191,29 @@ class ProjectGenerator
   end
 
   def build_partial_gemfile
-    gem_dependencies.
-      map { |dependency| gem_dependency(*dependency) }.
+    gem_dependencies_with_rr.
+      map { |dep| gem_dependency_line(dep) }.
       join("\n")
   end
 
   def test_file_generator
     @test_file_generator ||= TestFileGenerator.factory
+  end
+
+  def requires_with_rr(requires)
+    requires = requires.dup
+    unless autorequire_gems
+      if include_rr_before_test_framework
+        requires.unshift 'rr'
+      else
+        requires.push 'rr'
+      end
+    end
+    requires
+  end
+
+  def require_lines(requires)
+    requires.map { |path| "require '#{path}'" }
   end
 
   private
@@ -205,33 +234,35 @@ class ProjectGenerator
     RUBY_PLATFORM =~ /java/
   end
 
-  def gem_dependency(name, *args)
-    opts = args.last.is_a?(Hash) ? args.pop : {}
-    version = args.first
-    str = "gem '#{name}'"
-    str << ", '#{version}'" if version
-    str << ", #{opts.inspect}"
-    str
+  def gem_dependency(dep)
+    dep
   end
 
-  def gem_dependencies
+  def gem_dependency_line(dep)
+    dep = dep.dup
+    name = dep.delete(:name)
+    version = dep.delete(:version) || '>= 0'
+    "gem #{name.to_s.inspect}, #{version.inspect}, #{dep.inspect}"
+  end
+
+  def gem_dependencies_with_rr
     if RR.debug?
       puts "Include RR before test framework? #{include_rr_before_test_framework.inspect}"
       puts "Autorequiring gems? #{autorequire_gems.inspect}"
     end
 
-    deps = test_dependencies.dup
+    dependencies = gem_dependencies.dup
 
-    rr_dependency_options = {:path => root_dir}
-    rr_dependency_options[:require] = false unless autorequire_gems
-    rr_dependency = ['rr', rr_dependency_options]
+    rr_dep = {:name => 'rr', :path => root_dir}
+    rr_dep[:require] = false unless autorequire_gems
+    rr_dep = gem_dependency(rr_dep)
 
     if include_rr_before_test_framework
-      deps.unshift(rr_dependency)
+      dependencies.unshift(rr_dep)
     else
-      deps.push(rr_dependency)
+      dependencies.push(rr_dep)
     end
 
-    deps
+    dependencies
   end
 end

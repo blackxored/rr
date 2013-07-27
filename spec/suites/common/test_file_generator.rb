@@ -5,22 +5,25 @@ class TestFileGenerator
   include Generator
 
   attr_accessor \
-    :requires,
     :include_rr_before_test_framework,
     :autorequire_gems,
     :directory
 
-  attr_reader :project, :index
+  attr_reader :project, :index, :prelude, :requires
 
   def setup(project, index)
     super
+    @project = project
     self.include_rr_before_test_framework = project.include_rr_before_test_framework
     self.autorequire_gems = project.autorequire_gems
-    @project = project
-    @index = index
-    @prelude = ""
-    @body = ""
     @requires = []
+    @prelude = ""
+    @index = index
+    @body = ""
+  end
+
+  def add_to_requires(path)
+    @requires << path
   end
 
   def add_to_prelude(string)
@@ -37,6 +40,17 @@ class TestFileGenerator
       content = test_case.string
     end
     @body << content + "\n"
+  end
+
+  def add_working_test_case
+    add_test_case do |test_case|
+      test_case.add_test <<-EOT
+        object = Object.new
+        mock(object).foo
+        object.foo
+      EOT
+      yield test_case if block_given?
+    end
   end
 
   def call
@@ -58,7 +72,32 @@ class TestFileGenerator
     @test_case_generator ||= TestCaseGenerator.factory
   end
 
+  def add_test_case_with_adapter_tests
+    add_test_case do |test_case|
+      test_case.include_adapter_tests
+      yield test_case if block_given?
+    end
+  end
+
+  def add_working_test_case
+    add_test_case do |test_case|
+      test_case.add_working_test
+      yield test_case if block_given?
+    end
+  end
+
+  def add_working_test_case_with_adapter_tests
+    add_working_test_case do |test_case|
+      test_case.include_adapter_tests
+      yield test_case if block_given?
+    end
+  end
+
   private
+
+  def all_requires
+    project.requires_with_rr(requires)
+  end
 
   def content
     prelude_lines = []
@@ -67,21 +106,10 @@ class TestFileGenerator
       prelude_lines << @prelude
     end
 
-    requires = lines_to_require_test_framework.dup
-    unless autorequire_gems
-      if include_rr_before_test_framework
-        requires.unshift "require 'rr'"
-      else
-        requires.push "require 'rr'"
-      end
-    end
-    prelude_lines.concat(requires)
+    require_lines = project.require_lines(all_requires)
+    prelude_lines.concat(require_lines)
 
     join_lines(prelude_lines) + @body
-  end
-
-  def lines_to_require_test_framework
-    requires.map { |path| "require '#{path}'" }
   end
 
   def join_lines(lines)

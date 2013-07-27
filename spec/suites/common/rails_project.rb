@@ -3,11 +3,24 @@ module RailsProject
 
   def setup
     super
+    test_helper_generator.mixin RailsTestHelper
     @file_creators = []
   end
 
   def directory
     File.join(root_dir, 'tmp', 'rr-integration-tests', 'testapp')
+  end
+
+  def add_to_prelude(string)
+    test_helper_generator.configure do |file|
+      file.add_to_prelude(string)
+    end
+  end
+
+  def add_to_test_requires(path)
+    test_helper_generator.configure do |file|
+      file.add_to_requires(path)
+    end
   end
 
   def call
@@ -50,11 +63,12 @@ module RailsProject
       "t.#{type} :#{name}"
     end.join("\n")
 
-    add_file "app/models/#{model_name}.rb", <<-EOT
-      class #{model_class_name} < ActiveRecord::Base
-        attr_accessible #{symbolized_attribute_names}
-      end
-    EOT
+    model_content = "class #{model_class_name} < ActiveRecord::Base\n"
+    if rails_version == 3
+      model_content << "attr_accessible #{symbolized_attribute_names}\n"
+    end
+    model_content << "end\n"
+    add_file "app/models/#{model_name}.rb", model_content
 
     add_file "db/migrate/#{migration_timestamp}_create_#{table_name}.rb", <<-EOT
       class Create#{camelized_table_name} < ActiveRecord::Migration
@@ -71,12 +85,11 @@ module RailsProject
     EOT
   end
 
-  def build_partial_gemfile
-    <<-EOT
-      group :test do
-        #{super}
-      end
-    EOT
+  def gem_dependency(dep)
+    groups = Array(dep[:group] || [])
+    groups << :test unless groups.include?(:test)
+    dep[:group] = groups
+    dep
   end
 
   def sqlite_adapter

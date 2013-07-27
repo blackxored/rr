@@ -36,10 +36,14 @@ module Generator
   def initialize(*args)
     setup(*args)
     run_configurators
+    configure(*args)
     yield self if block_given?
   end
 
   def setup(*args)
+  end
+
+  def configure(*args)
   end
 
   private

@@ -1,6 +1,12 @@
 module TestUnitLikeTestCase
   attr_accessor :superclass
 
+  def include_adapter_tests
+    add_to_before_tests <<-EOT
+      include TestUnitLikeAdapterTests
+    EOT
+  end
+
   private
 
   def start_of_test_case

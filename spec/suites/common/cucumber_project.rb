@@ -14,6 +14,7 @@ module CucumberProject
     'cucumber'
   end
 
+  # XXX: Does this even take effect?
   def test_dir
     File.join(directory, 'features')
   end
