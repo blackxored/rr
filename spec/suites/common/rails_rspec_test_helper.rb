@@ -8,8 +8,4 @@ module RailsRSpecTestHelper
   def path
     File.join(project.directory, 'spec/spec_helper.rb')
   end
-
-  def start_of_requires
-    'require File.expand_path("../../config/environment", __FILE__)'
-  end
 end

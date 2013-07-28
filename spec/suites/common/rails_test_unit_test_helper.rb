@@ -8,14 +8,4 @@ module RailsTestUnitTestHelper
   def path
     File.join(project.directory, 'test/test_helper.rb')
   end
-
-  def start_of_requires
-    Regexp.new(
-      Regexp.escape('require File.expand_path(') +
-      %q/(?:"|')/ +
-      Regexp.escape('../../config/environment') +
-      %q/(?:"|')/ +
-      Regexp.escape(', __FILE__)')
-    )
-  end
 end

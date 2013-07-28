@@ -24,4 +24,14 @@ module RailsTestHelper
       f.write(content)
     end
   end
+
+  def start_of_requires
+    Regexp.new(
+      Regexp.escape('require File.expand_path(') +
+      %q/(?:"|')/ +
+      Regexp.escape('../../config/environment') +
+      %q/(?:"|')/ +
+      Regexp.escape(', __FILE__)')
+    )
+  end
 end

@@ -1,5 +1,6 @@
 require File.expand_path('../../spec_helper', __FILE__)
 require File.expand_path('../../../common/rails_rspec_integration_tests', __FILE__)
+require File.expand_path('../../../common/cucumber_project', __FILE__)
 
 describe 'Integration with RSpec 2 and Rails 4' do
   include RailsRSpecIntegrationTests
@@ -32,7 +33,7 @@ describe 'Integration with RSpec 2 and Rails 4' do
       end
       result = project.run_tests
       result.should be_success
-      result.should have_no_errors_or_failures
+      result.should_not have_errors_or_failures
     end
   end
 
@@ -44,12 +45,13 @@ describe 'Integration with RSpec 2 and Rails 4' do
       end
       result = project.run_tests
       result.should be_success
-      result.should have_no_errors_or_failures
+      result.should_not have_errors_or_failures
     end
   end
 
   def self.using_rr_with_cucumber_works
     specify "using RR with Cucumber works" do
+      pending "Cucumber doesn't work with Rails 4 just yet"
       project_generator = build_project_generator do |project_generator|
         project_generator.mixin CucumberProject
       end
@@ -72,7 +74,7 @@ describe 'Integration with RSpec 2 and Rails 4' do
     end
 
     including_the_adapter_manually_works
-    #using_rr_with_cucumber_works
+    using_rr_with_cucumber_works
   end
 
   context 'when RR is being required manually' do
@@ -89,7 +91,7 @@ describe 'Integration with RSpec 2 and Rails 4' do
 
     rr_hooks_into_the_test_framework_automatically
     including_the_adapter_manually_works
-    #using_rr_with_cucumber_works
+    using_rr_with_cucumber_works
 
     specify "when RR raises an error it raises a failure not an exception" do
       project = generate_project
@@ -120,7 +122,7 @@ describe 'Integration with RSpec 2 and Rails 4' do
       end
       expect {
         result = project.run_tests
-        result.should be_success
+        result.should have_errors_or_failures
       }.to leave_database_table_clear(project, :people)
     end
 
@@ -161,7 +163,7 @@ describe 'Integration with RSpec 2 and Rails 4' do
       end
       result = project.run_tests
       result.should be_success
-      result.should have_no_errors_or_failures
+      result.should_not have_errors_or_failures
     end
   end
 end
