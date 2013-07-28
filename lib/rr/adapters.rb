@@ -20,8 +20,11 @@ module RR
         end
 
         adapter = case adapter_const_name
-          when :TestUnit then RR.find_applicable_adapter(/^TestUnit/)
-          when :MiniTest then RR.find_applicable_adapter(/^minitest/i)
+          when :TestUnit
+            RR.find_applicable_adapter(/^testunit/i) ||
+            RR.find_applicable_adapter(/^minitest/i)
+          when :MiniTest
+            RR.find_applicable_adapter(/^minitest/i)
         end
         if adapter
           shim_adapters[adapter_const_name] = RR.module_shim_for_adapter(adapter)
