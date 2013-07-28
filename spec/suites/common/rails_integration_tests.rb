@@ -32,9 +32,24 @@ module RailsIntegrationTests
 
   include AdapterIntegrationTests
 
-  def configure_project_generator(generator)
+  def configure_project_generator(project_generator)
     super
-    generator.mixin RailsProject
+    configure_rails_project_generator(project_generator)
+  end
+
+  def build_rails_project_generator
+    ProjectGenerator.factory do |project_generator|
+      configure_rails_project_generator(project_generator)
+      yield project_generator if block_given?
+    end
+  end
+
+  def generate_rails_project(&block)
+    build_rails_project_generator.call(&block)
+  end
+
+  def configure_rails_project_generator(project_generator)
+    project_generator.mixin RailsProject
   end
 
   def leave_database_table_clear(project, table_name)

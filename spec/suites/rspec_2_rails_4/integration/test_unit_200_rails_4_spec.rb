@@ -5,7 +5,7 @@ require File.expand_path('../../../common/cucumber_project', __FILE__)
 describe 'Integration with Test::Unit 2.0.0 and Rails 4' do
   include RailsTestUnitIntegrationTests
 
-  def configure_project_generator(project_generator)
+  def configure_rails_project_generator(project_generator)
     super
     project_generator.configure do |project|
       project.rails_version = 4
@@ -51,7 +51,7 @@ describe 'Integration with Test::Unit 2.0.0 and Rails 4' do
   def self.using_rr_with_cucumber_works
     specify "using RR with Cucumber works" do
       pending "Cucumber doesn't work with Rails 4 just yet"
-      project_generator = build_project_generator do |project_generator|
+      project_generator = build_rails_project_generator do |project_generator|
         project_generator.mixin CucumberProject
       end
       project = project_generator.call

@@ -39,14 +39,14 @@ module AdapterIntegrationTests
   end
 
   def build_project_generator
-    ProjectGenerator.factory do |generator|
-      configure_project_generator(generator)
-      yield generator if block_given?
+    ProjectGenerator.factory do |project_generator|
+      configure_project_generator(project_generator)
+      yield project_generator if block_given?
     end
   end
 
   def generate_project(&block)
-    build_project_generator.new(&block).tap { |project| project.call }
+    build_project_generator.call(&block)
   end
 
   def configure_project_generator(generator)
