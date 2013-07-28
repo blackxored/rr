@@ -1,43 +1,45 @@
 require File.expand_path('../../spec_helper', __FILE__)
-require File.expand_path('../../../common/rails_integration_tests', __FILE__)
-require File.expand_path('../../../common/rails_test_unit_like_project', __FILE__)
+require File.expand_path('../../../common/rails_test_unit_integration_tests', __FILE__)
 require File.expand_path('../../../common/cucumber_project', __FILE__)
 
 describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
-  include RailsIntegrationTests
+  include RailsTestUnitIntegrationTests
+
+  def configure_rails_project_generator(project_generator)
+    super
+    project_generator.configure do |project|
+      project.rails_version = 3
+    end
+  end
 
   def configure_project_generator(project_generator)
     super
-    project_generator.mixin RailsTestUnitLikeProject
     project_generator.configure do |project|
-      project.rails_version = 3
-      project.test_dependencies << ['test-unit', '~> 2.5']
-      project.test_file_generator.configure do |file|
-        file.requires << 'test/unit'
-      end
+      project.test_unit_gem_version = '>= 2.5'
     end
   end
 
   def self.including_the_adapter_manually_works
     specify "including the adapter manually works" do
-      project = generate_project
-      project.add_test_file do |file|
-        file.add_to_body <<-EOT
+      project = generate_project do |project|
+        project.add_to_prelude <<-EOT
           class ActiveSupport::TestCase
             include RR::Adapters::TestUnit
           end
         EOT
+      end
+      project.add_test_file do |file|
         file.add_working_test_case_with_adapter_tests do |test_case|
           test_case.add_to_body <<-EOT
             def test_the_correct_adapters_are_loaded
-              assert_adapters_loaded #{matching_adapters.inspect}
+              assert_adapters_loaded #{adapters_that_should_be_loaded.inspect}
             end
           EOT
         end
       end
       result = project.run_tests
       result.should be_success
-      result.should have_no_errors_or_failures
+      result.should_not have_errors_or_failures
     end
   end
 
@@ -49,13 +51,13 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
       end
       result = project.run_tests
       result.should be_success
-      result.should have_no_errors_or_failures
+      result.should_not have_errors_or_failures
     end
   end
 
   def self.using_rr_with_cucumber_works
     specify "using RR with Cucumber works" do
-      project_generator = build_project_generator do |project_generator|
+      project_generator = build_rails_project_generator do |project_generator|
         project_generator.mixin CucumberProject
       end
       project = project_generator.call
@@ -64,16 +66,15 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
     end
   end
 
-  context 'when Bundler is autorequiring RR, and RR is listed before the test framework in the Gemfile' do
+  context 'when Bundler is autorequiring RR' do
     def configure_project_generator(project_generator)
       super
       project_generator.configure do |project|
         project.autorequire_gems = true
-        project.include_rr_before_test_framework = true
       end
     end
 
-    def matching_adapters
+    def adapters_that_should_be_loaded
       [:TestUnit2]
     end
 
@@ -81,51 +82,15 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
     using_rr_with_cucumber_works
   end
 
-  context 'when Bundler is autorequiring RR, and RR is listed after the test framework in the Gemfile' do
-    def configure_project_generator(project_generator)
-      super
-      project_generator.configure do |project|
-        project.autorequire_gems = true
-        project.include_rr_before_test_framework = false
-      end
-    end
-
-    def matching_adapters
-      [:TestUnit2, :TestUnit2ActiveSupport]
-    end
-
-    rr_hooks_into_the_test_framework_automatically
-    including_the_adapter_manually_works
-    using_rr_with_cucumber_works
-  end
-
-  context 'when RR is being required manually, and RR is required before the test framework' do
+  context 'when RR is being required manually' do
     def configure_project_generator(project_generator)
       super
       project_generator.configure do |project|
         project.autorequire_gems = false
-        project.include_rr_before_test_framework = true
       end
     end
 
-    def matching_adapters
-      [:TestUnit2, :TestUnit2ActiveSupport]
-    end
-
-    including_the_adapter_manually_works
-    using_rr_with_cucumber_works
-  end
-
-  context 'when RR is being required manually, and RR is required after the test framework' do
-    def configure_project_generator(project_generator)
-      super
-      project_generator.configure do |project|
-        project.autorequire_gems = false
-        project.include_rr_before_test_framework = false
-      end
-    end
-
-    def matching_adapters
+    def adapters_that_should_be_loaded
       [:TestUnit2, :TestUnit2ActiveSupport]
     end
 
@@ -162,7 +127,7 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 3' do
       end
       expect {
         result = project.run_tests
-        result.should be_success
+        result.should have_errors_or_failures
       }.to leave_database_table_clear(project, :people)
     end
 

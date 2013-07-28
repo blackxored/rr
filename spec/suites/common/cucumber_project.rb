@@ -1,8 +1,14 @@
 module CucumberProject
   def setup
     super
-    test_dependencies << ['cucumber-rails', '~> 1.3.1', :require => false]
-    test_dependencies << ['database_cleaner']
+    gem_dependencies << gem_dependency(
+      :name => 'cucumber-rails',
+      :version => '~> 1.3.1',
+      :require => false
+    )
+    gem_dependencies << gem_dependency(
+      :name => 'database_cleaner'
+    )
   end
 
   def call
@@ -10,12 +16,12 @@ module CucumberProject
     run_command_within('bundle exec rails generate cucumber:install')
   end
 
-  def test_runner_program
+  def test_runner_command
     'cucumber'
   end
 
   # XXX: Does this even take effect?
-  def test_dir
-    File.join(directory, 'features')
-  end
+  #def test_dir
+  #  File.join(directory, 'features')
+  #end
 end

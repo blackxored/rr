@@ -1,9 +1,9 @@
 require File.expand_path('../../spec_helper', __FILE__)
-require File.expand_path('../../../common/rails_test_unit_integration_tests', __FILE__)
+require File.expand_path('../../../common/rails_rspec_integration_tests', __FILE__)
 require File.expand_path('../../../common/cucumber_project', __FILE__)
 
-describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
-  include RailsTestUnitIntegrationTests
+describe 'Integration with RSpec 2 and Rails 3' do
+  include RailsRSpecIntegrationTests
 
   def configure_rails_project_generator(project_generator)
     super
@@ -12,20 +12,27 @@ describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
     end
   end
 
+  def configure_project_generator(project_generator)
+    super
+    project_generator.configure do |project|
+      project.rspec_version = 2
+    end
+  end
+
   def self.including_the_adapter_manually_works
     specify "including the adapter manually works" do
       project = generate_project do |project|
         project.add_to_prelude <<-EOT
-          class ActiveSupport::TestCase
-            include RR::Adapters::TestUnit
+          RSpec.configure do |c|
+            c.mock_with :rr
           end
         EOT
       end
       project.add_test_file do |file|
         file.add_working_test_case_with_adapter_tests do |test_case|
           test_case.add_to_body <<-EOT
-            def test_the_correct_adapters_are_loaded
-              assert_adapters_loaded #{adapters_that_should_be_loaded.inspect}
+            it 'loads the correct adapters' do
+              assert_adapters_loaded(#{adapters_that_should_be_loaded.inspect})
             end
           EOT
         end
@@ -68,7 +75,7 @@ describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
     end
 
     def adapters_that_should_be_loaded
-      [:TestUnit200]
+      [:RSpec2]
     end
 
     including_the_adapter_manually_works
@@ -84,7 +91,7 @@ describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
     end
 
     def adapters_that_should_be_loaded
-      [:TestUnit200, :TestUnit200ActiveSupport]
+      [:RSpec2]
     end
 
     rr_hooks_into_the_test_framework_automatically
@@ -124,20 +131,44 @@ describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
       }.to leave_database_table_clear(project, :people)
     end
 
-    specify "throwing an error in teardown doesn't mess things up" do
-      project = generate_project
-      project.add_test_file do |file|
-        file.add_test_case do |test_case|
-          test_case.add_to_body <<-EOT
-            def teardown
-              raise 'hell'
+    specify "it is still possible to use a custom RSpec-2 adapter" do
+      project = generate_project do |project|
+        project.add_to_prelude <<-EOT
+          module RR
+            module Adapters
+              module RSpec2
+                include RRMethods
+
+                def setup_mocks_for_rspec
+                  RR.reset
+                end
+
+                def verify_mocks_for_rspec
+                  RR.verify
+                end
+
+                def teardown_mocks_for_rspec
+                  RR.reset
+                end
+
+                def have_received(method = nil)
+                  RR::Adapters::Rspec::InvocationMatcher.new(method)
+                end
+              end
             end
-          EOT
-          test_case.add_test("")   # doesn't matter
-        end
+          end
+
+          RSpec.configure do |c|
+            c.mock_with RR::Adapters::RSpec2
+          end
+        EOT
+      end
+      project.add_test_file do |file|
+        file.add_test_case_with_adapter_tests
       end
       result = project.run_tests
-      result.should fail_with_output(/1 error/)
+      result.should be_success
+      result.should_not have_errors_or_failures
     end
   end
 end

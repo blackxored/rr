@@ -92,7 +92,7 @@ describe 'Integration with Test::Unit >= 2.5 and Rails 4' do
     end
 
     def adapters_that_should_be_loaded
-      [:TestUnit2, :TestUnit2ActiveSupport, :MiniTest4, :MiniTest4ActiveSupport]
+      [:TestUnit2, :TestUnit2ActiveSupport]
     end
 
     rr_hooks_into_the_test_framework_automatically

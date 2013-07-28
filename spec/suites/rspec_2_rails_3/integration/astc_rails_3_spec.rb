@@ -1,9 +1,9 @@
 require File.expand_path('../../spec_helper', __FILE__)
-require File.expand_path('../../../common/rails_test_unit_integration_tests', __FILE__)
+require File.expand_path('../../../common/rails_test_unit_like_integration_tests', __FILE__)
 require File.expand_path('../../../common/cucumber_project', __FILE__)
 
-describe 'Integration with Test::Unit 2.0.0 and Rails 3' do
-  include RailsTestUnitIntegrationTests
+describe 'Integration with straight ActiveSupport::TestCase and Rails 3' do
+  include RailsTestUnitLikeIntegrationTests
 
   def configure_rails_project_generator(project_generator)
     super
