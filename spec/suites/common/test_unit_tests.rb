@@ -1,6 +1,6 @@
 require File.expand_path('../adapter_tests', __FILE__)
 
-module TestUnitLikeAdapterTests
+module TestUnitAdapterTests
   def self.included(base)
     base.class_eval { include AdapterTests }
   end

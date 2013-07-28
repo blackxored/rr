@@ -38,6 +38,8 @@ module TestUnitLikeAdapterTests
   end
 
   def assert_subset(subset, set)
-    assert subset.proper_subset?(set), "Set 1 was not a subset of set 2.\nSet 1: #{subset.inspect}\nSet 2: #{set.inspect}"
+    value = (subset - set).empty?
+    message = "Set 1 was not a subset of set 2.\nSet 1: #{subset.inspect}\nSet 2: #{set.inspect}"
+    assert value, message
   end
 end

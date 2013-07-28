@@ -4,10 +4,17 @@ module RailsTestHelper
     File.open(path, 'r+') do |f|
       content = f.read
 
-      regexp = Regexp.new(Regexp.escape(start_of_requires) + '.+?\n\n', Regexp::MULTILINE)
+      regexp = Regexp.new(
+        '(' + start_of_requires.source + '.+?\n\n)',
+        Regexp::MULTILINE
+      )
       requires = project.requires_with_rr(@requires)
-      require_lines = project.require_lines(requires).map { |str| "#{str}\n" }.join + "\n\n"
-      content.gsub!(regexp, require_lines)
+      require_lines = project.require_lines(requires).
+        map { |str| "#{str}\n" }.
+        join
+      unless content.gsub!(regexp, '\1' + require_lines + "\n")
+        raise "Regexp didn't match!\nRegex: #{regexp}\nContent:\n#{content}"
+      end
 
       content << "\n\n" + @prelude
 

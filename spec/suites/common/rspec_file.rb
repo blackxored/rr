@@ -19,6 +19,7 @@ module RSpecFile
     "#{"%02d" % @index}_spec"
   end
 
+  # XXX: Do we need this if this is already in RSpecTestCase?
   def add_working_test_case_with_adapter_tests
     add_working_test_case do |test_case|
       test_case.add_to_before_tests <<-EOT

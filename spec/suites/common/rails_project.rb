@@ -3,7 +3,6 @@ module RailsProject
 
   def setup
     super
-    test_helper_generator.mixin RailsTestHelper
     @file_creators = []
   end
 
