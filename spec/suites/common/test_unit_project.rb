@@ -1,4 +1,8 @@
+require File.expand_path('../test_unit_like_project', __FILE__)
+
 module TestUnitProject
+  include TestUnitLikeProject
+
   attr_accessor :test_unit_gem_version
 
   def configure
@@ -10,9 +14,5 @@ module TestUnitProject
       )
     end
     add_to_test_requires 'test/unit'
-  end
-
-  def test_runner_command
-    'rake test'
   end
 end

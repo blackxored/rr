@@ -1,10 +1,10 @@
-require File.expand_path('../test_unit_project', __FILE__)
+require File.expand_path('../test_unit_like_project', __FILE__)
 require File.expand_path('../rails_project', __FILE__)
 require File.expand_path('../rails_test_unit_file', __FILE__)
 require File.expand_path('../rails_test_unit_test_helper', __FILE__)
 
-module RailsTestUnitProject
-  include TestUnitProject
+module RailsTestUnitLikeProject
+  include TestUnitLikeProject
   include RailsProject
 
   def setup

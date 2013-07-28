@@ -1,3 +1,5 @@
+require File.expand_path('../test_helper_generator', __FILE__)
+
 module RailsProject
   attr_accessor :rails_version
 
