@@ -1,17 +1,16 @@
 require File.expand_path('../minitest_project', __FILE__)
+require File.expand_path('../rails_project', __FILE__)
+require File.expand_path('../rails_minitest_file', __FILE__)
+require File.expand_path('../rails_minitest_test_helper', __FILE__)
+require File.expand_path('../test_helper_generator', __FILE__)
 
 module RailsMinitestProject
   include MinitestProject
+  include RailsProject
 
-  def initialize
+  def setup
     super
-    self.test_file_prelude = <<-EOT
-      require 'test_helper'
-      require '#{File.join(root_dir, 'spec/suites/common/test_unit_like_adapter_tests')}'
-    EOT
-  end
-
-  def test_dir
-    File.join(directory, 'test', 'unit')
+    test_file_generator.mixin RailsMinitestFile
+    test_helper_generator.mixin RailsMinitestTestHelper
   end
 end

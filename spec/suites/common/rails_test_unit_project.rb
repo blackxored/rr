@@ -13,13 +13,4 @@ module RailsTestUnitProject
     test_file_generator.mixin RailsTestUnitFile
     test_helper_generator.mixin RailsTestUnitTestHelper
   end
-
-  def call
-    super
-    test_helper_generator.call(self)
-  end
-
-  def test_helper_generator
-    @test_helper_generator ||= TestHelperGenerator.factory
-  end
 end

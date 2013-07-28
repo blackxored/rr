@@ -1,18 +1,15 @@
 module MinitestProject
-  attr_accessor :minitest_version
+  attr_accessor :minitest_gem_version
 
-  def create
-    test_framework_paths << 'minitest/autorun'
-    test_framework_dependencies << ['minitest', minitest_version]
+  def configure
     super
-  end
-
-  def test_dir
-    File.join(directory, 'test')
-  end
-
-  def test_filename
-    'the_test.rb'
+    if minitest_gem_version
+      gem_dependencies << gem_dependency(
+        :name => 'minitest',
+        :version => minitest_gem_version
+      )
+    end
+    add_to_test_requires 'minitest/autorun'
   end
 
   def test_runner_command

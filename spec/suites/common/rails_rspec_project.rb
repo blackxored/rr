@@ -24,13 +24,8 @@ module RailsRSpecProject
     add_to_test_requires 'rspec/rails'
   end
 
-  def call
+  def create_rails_project
     super
     run_command_within('bundle exec rails generate rspec:install --skip')
-    test_helper_generator.call(self)
-  end
-
-  def test_helper_generator
-    @test_helper_generator ||= TestHelperGenerator.factory
   end
 end

@@ -24,29 +24,8 @@ module RailsProject
 
   def call
     super
-    # remember that this has to be run with `bundle exec` to catch the correct
-    # 'rails' executable (rails 3 or rails 4)!
-    run_command "bundle exec rails new #{directory} --skip-bundle", :without_bundler_sandbox => true
-    within do
-      File.open('Gemfile', 'r+') do |f|
-        contents = f.read
-        contents << "\n\n" + build_partial_gemfile
-        f.write(contents)
-      end
-      create_additional_files
-      run_command('bundle env') if RR.debug?
-      run_command('bundle check || bundle install')
-      File.open('config/database.yml', 'w') do |f|
-        f.write <<-EOT
-          development: &development
-            adapter: #{sqlite_adapter}
-            database: #{database_file_path}
-          test:
-            <<: *development
-        EOT
-      end
-      run_command 'bundle exec rake db:migrate'
-    end
+    create_rails_project
+    test_helper_generator.call(self)
   end
 
   def add_file(file_name, content)
@@ -99,9 +78,39 @@ module RailsProject
     File.join(directory, 'db/test.sqlite3')
   end
 
+  def test_helper_generator
+    @test_helper_generator ||= TestHelperGenerator.factory
+  end
+
   private
 
   def create_additional_files
     @file_creators.each { |creator| creator.call }
+  end
+
+  def create_rails_project
+    # remember that this has to be run with `bundle exec` to catch the correct
+    # 'rails' executable (rails 3 or rails 4)!
+    run_command "bundle exec rails new #{directory} --skip-bundle", :without_bundler_sandbox => true
+    within do
+      File.open('Gemfile', 'r+') do |f|
+        contents = f.read
+        contents << "\n\n" + build_partial_gemfile
+        f.write(contents)
+      end
+      create_additional_files
+      run_command('bundle env') if RR.debug?
+      run_command('bundle check || bundle install')
+      File.open('config/database.yml', 'w') do |f|
+        f.write <<-EOT
+          development: &development
+            adapter: #{sqlite_adapter}
+            database: #{database_file_path}
+          test:
+            <<: *development
+        EOT
+      end
+      run_command 'bundle exec rake db:migrate'
+    end
   end
 end
