@@ -19,22 +19,22 @@ module AdapterIntegrationTests
     end
   end
 
-  class HaveNoErrorsOrFailuresMatcher
+  class HaveErrorsOrFailuresMatcher
     def matches?(result)
       match = result.output.match(/(\d+) error|(\d+) failure/)
-      !match || match.captures.all? {|n| !n || n == '0' }
+      match && match.captures.any? {|value| value && value.to_i > 0 }
     end
 
     def description
-      "have no errors or failures"
+      "have errors or failures"
     end
 
     def failure_message_for_should
-      "Expected running the test to not result in errors or failures but it did"
+      "Expected running the test to result in errors or failures but it did not"
     end
 
     def failure_message_for_should_not
-      "Expected running the test to result in errors or failures, but it did not"
+      "Expected running the test to not result in errors or failures, but it did "
     end
   end
 
@@ -56,7 +56,7 @@ module AdapterIntegrationTests
     FailWithOutputMatcher.new(pattern)
   end
 
-  def have_no_errors_or_failures
-    HaveNoErrorsOrFailuresMatcher.new
+  def have_errors_or_failures
+    HaveErrorsOrFailuresMatcher.new
   end
 end

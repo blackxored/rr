@@ -124,7 +124,8 @@ class ProjectGenerator
     end
     stdout, _ = bash.execute(command)
     exit_status = bash.exit_status
-    success = !!(exit_status == 0 || stdout =~ /Finished/)
+    #success = !!(exit_status == 0 || stdout =~ /Finished/)
+    success = (exit_status == 0)
     if RR.debug?
       puts "~ Output from `#{command}` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
       puts stdout
