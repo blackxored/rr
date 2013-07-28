@@ -22,6 +22,7 @@ module RR
       end
 
       def load
+        return if @loaded
         hook
         @loaded = true
         puts "Loaded adapter: #{name}" if RR.debug?
