@@ -1,4 +1,6 @@
 require File.expand_path('../test_unit_like_project', __FILE__)
+require File.expand_path('../test_unit_file', __FILE__)
+require File.expand_path('../test_unit_test_helper', __FILE__)
 
 module TestUnitProject
   include TestUnitLikeProject
