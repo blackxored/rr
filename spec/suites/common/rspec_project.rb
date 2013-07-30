@@ -1,3 +1,6 @@
+require File.expand_path('../rspec_file', __FILE__)
+require File.expand_path('../rspec_test_helper', __FILE__)
+
 module RSpecProject
   attr_accessor :rspec_version
 
@@ -10,6 +13,12 @@ module RSpecProject
     add_to_test_requires 'rspec/autorun'
 
     add_file '.rspec', dot_rspec_content
+  end
+
+  def setup
+    super
+    test_file_generator.mixin RSpecFile
+    test_helper_generator.mixin RSpecTestHelper
   end
 
   def test_runner_command
