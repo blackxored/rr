@@ -10,6 +10,8 @@ module RubyProject
   private
 
   def generate_skeleton
+    super
+
     FileUtils.mkdir_p(directory)
 
     within do
