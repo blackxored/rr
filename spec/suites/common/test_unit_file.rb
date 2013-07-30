@@ -5,6 +5,9 @@ module TestUnitFile
     super
     test_case_generator.mixin TestUnitTestCase
     self.directory = File.join(project.directory, 'test')
+    test_case_generator.configure do |test_case|
+      test_case.superclass = 'Test::Unit::TestCase'
+    end
   end
 
   def content

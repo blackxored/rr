@@ -78,7 +78,7 @@ module RSpecAdapterTests
     subset.should be_a_subset_of(set)
   end
 
-  def assert_raise(error, &block)
+  def assert_raises(error, &block)
     expect(&block).to raise_error(error)
   end
 

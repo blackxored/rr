@@ -1,4 +1,4 @@
-require File.expand_path('../test_unit_file', __FILE__)
+require File.expand_path('../test_unit_like_file', __FILE__)
 
 module RailsTestUnitFile
   include TestUnitFile

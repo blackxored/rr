@@ -1,5 +1,6 @@
 require File.expand_path('../generator', __FILE__)
 require File.expand_path('../test_file_generator', __FILE__)
+require File.expand_path('../test_helper_generator', __FILE__)
 
 require 'session'
 
@@ -57,6 +58,7 @@ class ProjectGenerator
     @test_requires = []
     @number_of_test_files = 0
     @prelude = ""
+    @files_to_add = []
   end
 
   def root_dir
@@ -68,7 +70,7 @@ class ProjectGenerator
   end
 
   def directory
-    File.join(root_dir, 'tmp', 'rr-integration-tests')
+    File.join(root_dir, 'tmp', 'rr-integration-tests', 'test_project')
   end
 
   def bundle_dir
@@ -86,16 +88,19 @@ class ProjectGenerator
   def call
     FileUtils.rm_rf directory
     FileUtils.mkdir_p File.dirname(directory)
+    generate_skeleton
+    puts "Generating test helper"
+    test_helper_generator.call(self)
   end
 
   def add_to_prelude(string)
-    test_file_generator.configure do |file|
+    test_helper_generator.configure do |file|
       file.add_to_prelude(string)
     end
   end
 
   def add_to_test_requires(path)
-    test_file_generator.configure do |file|
+    test_helper_generator.configure do |file|
       file.add_to_requires(path)
     end
   end
@@ -179,16 +184,7 @@ class ProjectGenerator
   end
 
   def add_file(file_name, content)
-    full_file_name = File.join(directory, file_name)
-    FileUtils.mkdir_p File.dirname(full_file_name)
-    File.open(full_file_name, 'w') do |f|
-      if RR.debug?
-        puts "~ Adding file #{full_file_name} ~~~~~~~~~~~~~~~~~~~~~~~~"
-        puts content
-        puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-      end
-      f.write(content)
-    end
+    @files_to_add << [file_name, content]
   end
 
   def build_partial_gemfile
@@ -217,7 +213,29 @@ class ProjectGenerator
     requires.map { |path| "require '#{path}'" }
   end
 
+  def test_helper_generator
+    @test_helper_generator ||= TestHelperGenerator.factory
+  end
+
   private
+
+  def generate_skeleton
+  end
+
+  def create_files
+    @files_to_add.each do |file_name, content|
+      full_file_name = File.join(directory, file_name)
+      FileUtils.mkdir_p File.dirname(full_file_name)
+      File.open(full_file_name, 'w') do |f|
+        if RR.debug?
+          puts "~ Adding file #{full_file_name} ~~~~~~~~~~~~~~~~~~~~~~~~"
+          puts content
+          puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        end
+        f.write(content)
+      end
+    end
+  end
 
   def create_link(filename, dest_filename = filename)
     FileUtils.ln_sf(File.join(root_dir, filename), File.join(directory, dest_filename))

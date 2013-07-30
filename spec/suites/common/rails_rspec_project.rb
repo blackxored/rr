@@ -2,7 +2,6 @@ require File.expand_path('../rspec_project', __FILE__)
 require File.expand_path('../rails_project', __FILE__)
 require File.expand_path('../rails_rspec_file', __FILE__)
 require File.expand_path('../rails_rspec_test_helper', __FILE__)
-require File.expand_path('../test_helper_generator', __FILE__)
 
 module RailsRSpecProject
   include RSpecProject
@@ -24,7 +23,7 @@ module RailsRSpecProject
     add_to_test_requires 'rspec/rails'
   end
 
-  def create_rails_project
+  def create_skeleton
     super
     run_command_within('bundle exec rails generate rspec:install --skip')
   end

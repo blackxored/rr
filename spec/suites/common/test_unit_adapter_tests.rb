@@ -32,7 +32,7 @@ module TestUnitAdapterTests
     error_class = RR::Errors.error_class(
       RR::Errors::SpyVerificationErrors::InvocationCountError
     )
-    assert_raise(error_class) do
+    assert_raises(error_class) do
       assert_received(subject) {|s| s.foobar(1, 2, 3) }
     end
   end

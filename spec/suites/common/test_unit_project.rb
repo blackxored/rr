@@ -15,4 +15,10 @@ module TestUnitProject
     end
     add_to_test_requires 'test/unit'
   end
+
+  def setup
+    super
+    test_file_generator.mixin TestUnitFile
+    test_helper_generator.mixin TestUnitTestHelper
+  end
 end
