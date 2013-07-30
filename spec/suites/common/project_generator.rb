@@ -89,7 +89,6 @@ class ProjectGenerator
     FileUtils.rm_rf directory
     FileUtils.mkdir_p File.dirname(directory)
     generate_skeleton
-    puts "Generating test helper"
     test_helper_generator.call(self)
   end
 

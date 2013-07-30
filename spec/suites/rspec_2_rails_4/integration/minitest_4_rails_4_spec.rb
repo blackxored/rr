@@ -15,7 +15,7 @@ describe 'Integration with MiniTest 4 and Rails 4' do
   def configure_project_generator(project_generator)
     super
     project_generator.configure do |project|
-      project.minitest_gem_version = '~> 4.0'
+      project.minitest_version = 4
     end
   end
 

@@ -23,7 +23,7 @@ module RailsRSpecProject
     add_to_test_requires 'rspec/rails'
   end
 
-  def create_skeleton
+  def generate_skeleton
     super
     run_command_within('bundle exec rails generate rspec:install --skip')
   end
