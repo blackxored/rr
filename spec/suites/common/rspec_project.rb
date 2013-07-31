@@ -4,21 +4,20 @@ require File.expand_path('../rspec_test_helper', __FILE__)
 module RSpecProject
   attr_accessor :rspec_version
 
+  def setup
+    super
+    test_file_generator.mixin RSpecFile
+    test_helper_generator.mixin RSpecTestHelper
+  end
+
   def configure
     super
     gem_dependencies << gem_dependency(
       :name => 'rspec',
       :version => rspec_gem_version
     )
-    add_to_test_requires 'rspec/autorun'
-
-    add_file '.rspec', dot_rspec_content
-  end
-
-  def setup
-    super
-    test_file_generator.mixin RSpecFile
-    test_helper_generator.mixin RSpecTestHelper
+    add_to_test_requires(rspec_autorun_path)
+    add_file(rspec_options_filename, dot_rspec_content)
   end
 
   def test_runner_command
@@ -36,14 +35,33 @@ module RSpecProject
     end
   end
 
-  def dot_rspec_content
-    content = <<-EOT
-      --color
-      --format documentation
-    EOT
-    if RR.debug?
-      content << '--backtrace'
+  def rspec_autorun_path
+    if rspec_version == 1
+      'spec/autorun'
+    else
+      'rspec/autorun'
     end
-    content
+  end
+
+  def rspec_options_filename
+    if rspec_version == 1
+      'spec/spec.opts'
+    else
+      '.rspec'
+    end
+  end
+
+  def dot_rspec_content
+    lines = []
+    lines << '--color'
+    if rspec_version == 1
+      lines << '--format nested'
+    else
+      lines << '--format documentation'
+    end
+    if RR.debug?
+      lines << '--backtrace'
+    end
+    lines.join("\n")
   end
 end

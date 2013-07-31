@@ -5,16 +5,25 @@ module RubyRSpecProject
   include RubyProject
   include RSpecProject
 
-  def setup
+  def setuo
     super
-
     #test_file_generator.mixin RubyTestUnitTestFile
     #test_helper_generator.mixin RubyTestUnitTestHelper
+  end
 
-    add_file 'Rakefile', <<-EOT
-      require 'rspec/core/rake_task'
-      RSpec::Core::RakeTask.new(:spec)
-    EOT
+  def configure
+    super
+    if rspec_version == 1
+      add_file 'Rakefile', <<-EOT
+        require 'spec/rake/spectask'
+        Spec::Rake::SpecTask.new(:spec)
+      EOT
+    else
+      add_file 'Rakefile', <<-EOT
+        require 'rspec/core/rake_task'
+        RSpec::Core::RakeTask.new(:spec)
+      EOT
+    end
   end
 
 

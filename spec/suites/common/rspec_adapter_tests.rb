@@ -71,7 +71,7 @@ module RSpecAdapterTests
   end
 
   def assert_equal(expected, actual)
-    expected.should eq actual
+    expected.should be == actual
   end
 
   def assert_subset(subset, set)
