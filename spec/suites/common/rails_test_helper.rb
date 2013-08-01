@@ -1,40 +1,45 @@
 module RailsTestHelper
   def call
     super
-    File.open(path, 'r+') do |f|
-      content = f.read
 
-      regexp = Regexp.new(
-        '(' + start_of_requires.source + '.+?\n\n)',
-        Regexp::MULTILINE
-      )
-      requires = project.requires_with_rr(@requires)
-      require_lines = project.require_lines(requires).
-        map { |str| "#{str}\n" }.
-        join
-      unless content.gsub!(regexp, '\1' + require_lines + "\n")
-        raise "Regexp didn't match!\nRegex: #{regexp}\nContent:\n#{content}"
-      end
+    content = File.read(path)
 
-      content << "\n\n" + @prelude
+    content << "require 'pp'\npp $:\n"
 
-      if RR.debug?
-        puts "~ Content of #{File.basename(path)} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        puts content
-        puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-      end
+    regexp = Regexp.new(
+      '(' + start_of_requires.source + '.+?\n\n)',
+      Regexp::MULTILINE
+    )
+    requires = project.requires_with_rr(@requires)
+    require_lines = project.require_lines(requires).
+      map { |str| "#{str}\n" }.
+      join
+    unless content.gsub!(regexp, '\1' + require_lines + "\n")
+      raise "Regexp didn't match!\nRegex: #{regexp}\nContent:\n#{content}"
+    end
 
-      f.write(content)
+    content << "\n\n" + @prelude
+
+    File.open(path, 'w') { |f| f.write(content) }
+
+    if RR.debug?
+      puts "~ Content of #{File.basename(path)} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts File.read(path)
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     end
   end
 
   def start_of_requires
-    Regexp.new(
-      Regexp.escape('require File.expand_path(') +
-      %q/(?:"|')/ +
-      Regexp.escape('../../config/environment') +
-      %q/(?:"|')/ +
-      Regexp.escape(', __FILE__)')
-    )
+    if project.rails_version == 2
+      Regexp.new(Regexp.escape('require File.expand_path(File.dirname(__FILE__) + "/../config/environment")'))
+    else
+      Regexp.new(
+        Regexp.escape('require File.expand_path(') +
+        %q/(?:"|')/ +
+        Regexp.escape('../../config/environment') +
+        %q/(?:"|')/ +
+        Regexp.escape(', __FILE__)')
+      )
+    end
   end
 end

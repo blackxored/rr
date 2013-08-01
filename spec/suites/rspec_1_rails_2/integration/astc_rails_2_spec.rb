@@ -1,21 +1,14 @@
 require File.expand_path('../../spec_helper', __FILE__)
-require File.expand_path('../../../common/rails_test_unit_integration_tests', __FILE__)
+require File.expand_path('../../../common/rails_test_unit_like_integration_tests', __FILE__)
 require File.expand_path('../../../common/cucumber_project', __FILE__)
 
-describe 'Integration with Test::Unit ~> 2.4 and Rails 2' do
-  include RailsTestUnitIntegrationTests
+describe 'Integration with straight ActiveSupport::TestCase and Rails 3' do
+  include RailsTestUnitLikeIntegrationTests
 
   def configure_rails_project_generator(project_generator)
     super
     project_generator.configure do |project|
-      project.rails_version = 2
-    end
-  end
-
-  def configure_project_generator(project_generator)
-    super
-    project_generator.configure do |project|
-      project.test_unit_gem_version = '~> 2.4'
+      project.rails_version = 3
     end
   end
 
@@ -66,7 +59,7 @@ describe 'Integration with Test::Unit ~> 2.4 and Rails 2' do
     end
   end
 
-  context 'when RR is listed in config/environment.rb' do
+  context 'when Bundler is autorequiring RR' do
     def configure_project_generator(project_generator)
       super
       project_generator.configure do |project|
@@ -75,7 +68,7 @@ describe 'Integration with Test::Unit ~> 2.4 and Rails 2' do
     end
 
     def adapters_that_should_be_loaded
-      [:TestUnit2]
+      [:TestUnit200]
     end
 
     including_the_adapter_manually_works
@@ -91,7 +84,7 @@ describe 'Integration with Test::Unit ~> 2.4 and Rails 2' do
     end
 
     def adapters_that_should_be_loaded
-      [:TestUnit2, :TestUnit2ActiveSupport]
+      [:TestUnit200, :TestUnit200ActiveSupport]
     end
 
     rr_hooks_into_the_test_framework_automatically

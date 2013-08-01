@@ -35,7 +35,7 @@ class ProjectGenerator
 
     def call
       match = command.match(/^((?:\w+=[^ ]+ )*)(.+)$/)
-      project.run_command_within("bundle exec #{match[2]}", :env => match[1])
+      project.run_command_within(match[2], :env => match[1])
     end
   end
 
@@ -113,6 +113,11 @@ class ProjectGenerator
     TestsRunner.call(self)
   end
 
+  def declare_and_install_gems
+    declare_gems_within_gemfile
+    install_gems_via_bundler
+  end
+
   def within(&block)
     ret = nil
     Dir.chdir(directory) { ret = block.call }
@@ -186,7 +191,7 @@ class ProjectGenerator
     @files_to_add << [file_name, content]
   end
 
-  def build_partial_gemfile
+  def build_gem_list
     gem_dependencies_with_rr.
       map { |dep| gem_dependency_line(dep) }.
       join("\n")
@@ -225,14 +230,7 @@ class ProjectGenerator
     @files_to_add.each do |file_name, content|
       full_file_name = File.join(directory, file_name)
       FileUtils.mkdir_p File.dirname(full_file_name)
-      File.open(full_file_name, 'w') do |f|
-        if RR.debug?
-          puts "~ Adding file #{full_file_name} ~~~~~~~~~~~~~~~~~~~~~~~~"
-          puts content
-          puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        end
-        f.write(content)
-      end
+      create_file full_file_name, content
     end
   end
 
@@ -242,6 +240,66 @@ class ProjectGenerator
 
   def copy_file(filename, dest_filename = filename)
     FileUtils.cp(File.join(root_dir, filename), File.join(directory, dest_filename))
+  end
+
+  def create_file(filename, content)
+    File.open(filename, 'w') do |f|
+      if RR.debug?
+        puts "~ Adding file #{filename} ~~~~~~~~~~~~~~~~~~~~~~~~"
+        puts content
+        puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      end
+      f.write(content)
+    end
+  end
+
+  def replace_in_file(filename, search, replace)
+    content = File.read(filename)
+    content.sub!(search, replace)
+    File.open(filename, 'w') { |f| f.write(content) }
+
+    if RR.debug?
+      puts "~ #{filename} is now: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts File.read(filename)
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    end
+  end
+
+  def append_to_file(filename, content)
+    File.open(filename, 'w+') do |f|
+      f << content
+    end
+
+    if RR.debug?
+      puts "~ #{filename} is now: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts File.read(filename)
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    end
+  end
+
+  def prepend_to_file(filename, additional_content)
+    content = File.read(filename)
+    File.open(filename, 'w') do |f|
+      f.write(additional_content + content)
+    end
+
+    if RR.debug?
+      puts "~ #{filename} is now: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts File.read(filename)
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    end
+  end
+
+  def add_in_file_after(filename, search, additional_content)
+    content = File.read(filename)
+    content.insert(content.index(search) + search.length, additional_content)
+    File.open(filename, 'w') { |f| f.write(content) }
+
+    if RR.debug?
+      puts "~ #{filename} is now: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      puts File.read(filename)
+      puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    end
   end
 
   def ruby_18?
@@ -259,7 +317,7 @@ class ProjectGenerator
   def gem_dependency_line(dep)
     dep = dep.dup
     name = dep.delete(:name)
-    version = dep.delete(:version) || '>= 0'
+    version = dep.delete(:version)
     "gem #{name.to_s.inspect}, #{version.inspect}, #{dep.inspect}"
   end
 
@@ -271,7 +329,7 @@ class ProjectGenerator
 
     dependencies = gem_dependencies.dup
 
-    rr_dep = {:name => 'rr', :path => root_dir}
+    rr_dep = {:name => 'rr', :path => root_dir, :version => RR.version}
     rr_dep[:require] = false unless autorequire_gems
     rr_dep = gem_dependency(rr_dep)
 
